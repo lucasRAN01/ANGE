@@ -1,0 +1,24 @@
+{
+  "method": "built-in image_gen.imagegen",
+  "reference": "Compagne fournie avec le design fidèle",
+  "source": "atlas-source.png",
+  "atlas": {
+    "columns": 4,
+    "rows": 2,
+    "width": 1448,
+    "height": 1086,
+    "cellWidth": 362,
+    "cellHeight": 543
+  },
+  "frames": [
+    "idle",
+    "blink",
+    "speech-small",
+    "speech-wide",
+    "speech-rounded",
+    "listening",
+    "greeting",
+    "thinking"
+  ],
+  "prompt": "Use case: identity-preserve. Use the supplied existing female ANGE companion character as exact identity and costume reference for an animated mobile assistant. Create a production sprite atlas, EXACTLY FOUR COLUMNS and TWO ROWS, EIGHT equal rectangular cells in a 2048x1536 landscape transparent PNG. Each cell 512x768. Every cell shows the SAME character bust (head to below chest) in same centered location and SAME camera scale, straight upright posture, head near upper third, front three-quarter toward viewer, both shoulders visible. Preserve warm olive skin, expressive brown eyes, black hair in bun, blue cyan headset with mic, navy futuristic cyan-lined suit with orbital A. No other images, NO text, NO grid lines, no shadows outside figure, actual transparent background. Cells left-to-right top-to-bottom: 1 eyes open calm warm smile mouth closed; 2 identical head body eyes fully closed for a blink, mouth closed; 3 eyes open mouth slightly open saying a vowel; 4 eyes open mouth wider naturally open saying ah, visible teeth subtle, not cartoon; 5 eyes open small rounded lips saying oo; 6 listening attentive head tilt a few degrees and gentle smile mouth closed; 7 warm greeting right hand raised near shoulder palm forward fingers intact, smiling closed mouth; 8 softly smiling thoughtful small head nod mouth closed. Use exact consistent face and lighting across all eight frames. Hair and hand fully inside each cell, with at least 12% transparent margins. Polished semi-realistic 3D render matching source. This is an animation asset sheet to be cropped into eight frames, not a finished app screenshot."
+}

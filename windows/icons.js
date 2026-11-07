@@ -1,0 +1,27 @@
+'use strict';
+const shapes={
+home:'<path d="M3 11 12 3l9 8-2 2-1-1v9h-5v-6h-3v6H5v-9l-1 1Z"/>',
+chat:'<path d="M12 3C6 3 2 7 2 11c0 3 2 5 4 7l-1 4 5-3h2c6 0 10-3 10-8s-4-8-10-8Z"/><g fill="#064071"><circle cx="7" cy="11" r="1.2"/><circle cx="12" cy="11" r="1.2"/><circle cx="17" cy="11" r="1.2"/></g>',
+memory:'<ellipse cx="12" cy="5" rx="9" ry="4"/><path d="M3 7v5c0 5 18 5 18 0V7c-4 4-14 4-18 0Zm0 8v5c0 5 18 5 18 0v-5c-4 4-14 4-18 0Z"/>',
+voice:'<rect x="8" y="2" width="8" height="13" rx="4"/><path d="M5 10v2a7 7 0 0 0 14 0v-2M12 19v4M8 23h8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+settings:'<path d="m10 1 4 0 1 4 3 1 3-1 2 4-3 3 0 2 3 2-2 4-4-1-2 2-1 3h-4l-1-4-3-1-3 1-2-4 3-2v-3L1 9l2-4 4 1 2-2Z"/><circle cx="12" cy="12" r="4" fill="#06305a"/>',
+control:'<path d="m10 1 4 0 1 4 3 1 3-1 2 4-3 3 0 2 3 2-2 4-4-1-2 2-1 3h-4l-1-4-3-1-3 1-2-4 3-2v-3L1 9l2-4 4 1 2-2Z"/><circle cx="12" cy="12" r="4" fill="#06305a"/>',
+vision:'<path d="M1 12C6 2 18 2 23 12 18 22 6 22 1 12Z"/><circle cx="12" cy="12" r="5.5" fill="#06305a"/><circle cx="12" cy="12" r="3"/>',
+grid:Array.from({length:9},(_,i)=>`<rect x="${2+i%3*8}" y="${2+Math.floor(i/3)*8}" width="5" height="5" rx="2"/>`).join(''),
+link:'<path d="M2 3h17v12H2zM8 15v4M3 20h13" fill="none" stroke="currentColor" stroke-width="2"/><rect x="17" y="10" width="6" height="12" rx="1"/>',
+brain:'<path d="M10 3C7 0 4 4 5 7 0 8 1 14 4 15 1 19 6 23 10 21V3Zm4 0c3-3 6 1 5 4 5 1 4 7 1 8 3 4-2 8-6 6V3Z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M5 7 9 9M4 15l5-2m10-6-4 2m5 6-5-2" fill="none" stroke="currentColor" stroke-width="1.5"/>',
+security:'<path d="M12 1 22 5v7c0 6-10 11-10 11S2 18 2 12V5Z"/><path d="m7 12 3 3 7-7" fill="none" stroke="#06305a" stroke-width="2.5"/>',
+sync:'<path d="M18 6a8 8 0 0 0-13 5H1l5 6 5-6H7a5 5 0 0 1 9-3Zm-12 12a8 8 0 0 0 13-5h4l-5-6-5 6h4a5 5 0 0 1-9 3Z"/>',
+globe:'<circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1.8"/><ellipse cx="12" cy="12" rx="4" ry="10" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M2 12h20M4 6h16M4 18h16" stroke="currentColor" stroke-width="1.3"/>',
+wave:'<path d="M2 11v3m4-7v11m4-16v22m4-18v15m4-12v9m4-7v3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+history:'<circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 6v7l4 2" fill="none" stroke="currentColor" stroke-width="2"/>',
+info:'<circle cx="12" cy="12" r="10"/><path d="M12 10v8M12 6v1" stroke="#06305a" stroke-width="2.5"/>',
+calendar:'<rect x="3" y="4" width="18" height="18" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3 9h18M7 1v6m10-6v6M7 13h3m3 0h4m-10 4h3" stroke="currentColor" stroke-width="2"/>',
+rocket:'<path d="M9 7c3-5 9-6 13-6 0 6-2 11-7 14l-6-8ZM8 9 3 8l-3 7 7-1 3 3-1 7 7-3-1-5M7 17l-5 5 1-6Z"/><circle cx="16" cy="7" r="2" fill="#06305a"/>',
+heart:'<path d="M12 22S-4 12 2 5c4-5 10 0 10 2 0-2 6-7 10-2 6 7-10 17-10 17Z"/>',
+cloud:'<path d="M6 20a6 6 0 0 1-1-12 8 8 0 0 1 15 0 6 6 0 0 1-1 12Z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 9v8m-3-3 3 3 3-3" stroke="currentColor" stroke-width="2" fill="none"/>',
+infinity:'<path d="M12 12C8 0 0 4 1 12c1 8 8 9 11 0 3-9 10-8 11 0 1 8-7 12-11 0Z" fill="none" stroke="currentColor" stroke-width="2.5"/>',
+search:'<circle cx="10" cy="10" r="7" fill="none" stroke="currentColor" stroke-width="2"/><path d="m15 15 7 7" stroke="currentColor" stroke-width="2.5"/>',
+mobile:'<rect x="6" y="1" width="12" height="22" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M10 20h4" stroke="currentColor"/>',
+splash:'<path d="m12 0 4 8 8 4-8 4-4 8-4-8-8-4 8-4Z"/>'};
+function icon(name,cls=''){return `<svg class="icon ${cls}" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">${shapes[name]||shapes.grid}</svg>`}

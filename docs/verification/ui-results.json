@@ -1,0 +1,31 @@
+{
+  "status": "PASS",
+  "screens": [
+    "splash",
+    "home",
+    "mobile",
+    "voice",
+    "chat",
+    "brain",
+    "memory",
+    "link",
+    "control",
+    "settings"
+  ],
+  "checks": [
+    "navigation 10 écrans",
+    "captures 10 écrans",
+    "chat et échappement HTML",
+    "notes ajout modification suppression persistance",
+    "export et import JSON",
+    "6 états voix",
+    "appairage fictif",
+    "annulation contrôle",
+    "réduction animation",
+    "absence débordement 390px sur 10 écrans",
+    "absence erreurs JavaScript",
+    "absence requêtes réseau"
+  ],
+  "errors": [],
+  "network": []
+}

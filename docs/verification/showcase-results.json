@@ -1,0 +1,97 @@
+{
+  "status": "PASS",
+  "geometry": {
+    ".pc-window": {
+      "x": 196,
+      "y": 144,
+      "width": 794,
+      "height": 514
+    },
+    ".handset": {
+      "x": 1000,
+      "y": 132,
+      "width": 285,
+      "height": 551
+    },
+    ".companion": {
+      "x": 1296,
+      "y": 126,
+      "width": 240,
+      "height": 480
+    },
+    ".module-dock": {
+      "x": 10,
+      "y": 684,
+      "width": 1514,
+      "height": 253
+    }
+  },
+  "images": [
+    {
+      "src": "assets/logo.svg",
+      "loaded": true
+    },
+    {
+      "src": "assets/logo.svg",
+      "loaded": true
+    },
+    {
+      "src": "assets/logo.svg",
+      "loaded": true
+    },
+    {
+      "src": "assets/core-halo.webp",
+      "loaded": true
+    },
+    {
+      "src": "assets/logo.svg",
+      "loaded": true
+    },
+    {
+      "src": "assets/companion.png",
+      "loaded": true
+    },
+    {
+      "src": "assets/logo.svg",
+      "loaded": true
+    },
+    {
+      "src": "assets/logo.svg",
+      "loaded": true
+    },
+    {
+      "src": "assets/brain.webp",
+      "loaded": true
+    },
+    {
+      "src": "assets/logo.svg",
+      "loaded": true
+    },
+    {
+      "src": "assets/logo.svg",
+      "loaded": true
+    },
+    {
+      "src": "assets/logo.svg",
+      "loaded": true
+    },
+    {
+      "src": "assets/logo.svg",
+      "loaded": true
+    }
+  ],
+  "checks": [
+    "6 panneaux DOM",
+    "6 fonctionnalités",
+    "6 raccourcis mobile",
+    "images chargées",
+    "parcours voix mobile",
+    "interrupteur",
+    "langue",
+    "chat du panneau",
+    "menu modules",
+    "réduction et restauration",
+    "absence erreur JavaScript ou fichier manquant"
+  ],
+  "errors": []
+}

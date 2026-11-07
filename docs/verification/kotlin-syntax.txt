@@ -1,0 +1,5 @@
+ANGE_2_0_Fidele/android/app/src/main/java/com/ange/mobile/MainActivity.kt: parsed
+ANGE_2_0_Fidele/android/app/build.gradle.kts: parsed
+ANGE_2_0_Fidele/android/build.gradle.kts: parsed
+ANGE_2_0_Fidele/android/settings.gradle.kts: parsed
+PASS syntax only; no dependency resolution or Android type checking.
