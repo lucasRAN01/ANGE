@@ -4,12 +4,14 @@ ADVANCED NEURAL GUARDIAN ENGINE
 
 ANGE Companion ajoute une compagne animée et parlante au design `ANGE_2_0_Design_Fidele`, avec une application Android native et un service PC local/cloud. Le projet suit A.docx comme cahier des charges de l’écosystème. **Il ne réalise pas encore l’intégralité de cet assistant.**
 
+**Nouveau : IA directement sur le téléphone.** La version Android 2.0.1-phone propose le modèle libre Qwen3 0.6B INT4, téléchargé ou importé une fois (347 Mo). Les réponses sont ensuite calculées sur le CPU du téléphone, sans PC, Supabase, compte fournisseur ni API payante. Voir [le guide Galaxy A53 et les limites](docs/TELEPHONE_GRATUIT.md). Aucun téléchargement de modèle n’est lancé sans appui et confirmation.
+
 ## Compagne mobile
 
 - Même personnage féminin, huit poses illustrées, clignements, respiration, écoute attentive, salutation et mouvements de bouche pendant la lecture vocale.
 - Saisie texte, historique limité à la session, synthèse vocale Android, sélection des voix réellement présentes, interruption et arrêt à la mise en arrière-plan.
 - Microphone demandé seulement après appui sur Parler. Reconnaissance sur l’appareil privilégiée ; reconnaissance réseau uniquement après autorisation explicite de session.
-- Trois modes : **Mobile limité** sans IA générative, **Local PC** avec Ollama, **Cloud** via le PC. Chaque envoi cloud exige une confirmation du message et de son contexte.
+- Trois modes Android : **Simple** (heure/date/salutation, sans IA générative), **IA téléphone** (Qwen3 embarqué après installation du modèle), **PC local** (Ollama facultatif). Aucun mode cloud ni appel IA payant depuis cet APK ; une ancienne préférence cloud est remplacée par IA téléphone. Le connecteur cloud demeure dans la version web/PC et exige sa propre configuration et confirmation.
 - Jeton de connexion chiffré au repos avec Android Keystore ; clés du fournisseur cloud uniquement sur le PC.
 
 L’animation est une **animation 2D par poses**, pas un personnage 3D. La bouche suit approximativement les événements et la durée de la lecture vocale, sans correspondance phonème par phonème. La voix féminine, sa qualité et les langues disponibles dépendent du moteur Android installé. Le malgache n’est pas annoncé comme validé.
@@ -58,7 +60,7 @@ Ce mécanisme est une **authentification manuelle par jeton partagé**, pas enco
 
 ## Android et vérifications
 
-Ouvrir `android` dans Android Studio avec JDK 17 et SDK / Build Tools 35. Gradle 8.9, AGP 8.7.3, Kotlin/Compose compiler 2.0.21 sont les versions du projet. La cible reste API 35 et le minimum API 26 ; l’utilisation sur Android 16 demande un essai réel.
+Ouvrir `android` dans Android Studio avec JDK 17 et SDK / Build Tools 35. Gradle 8.11.1, AGP 8.10.1, Kotlin/Compose compiler 2.2.21 et LiteRT-LM 0.16.0 sont les versions du projet. La cible reste API 35, le minimum API 26. Le moteur embarqué contient les bibliothèques ARM64 et x86_64. Le Galaxy A53 physique n’est pas accessible pour une mesure de performances.
 
 ```powershell
 .\android\gradlew.bat -p android :app:assembleDebug :app:testDebugUnitTest

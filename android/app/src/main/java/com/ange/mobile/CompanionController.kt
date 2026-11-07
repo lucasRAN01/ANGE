@@ -8,6 +8,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.net.Uri
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
@@ -36,6 +37,8 @@ class CompanionController(context: Context) {
     private val prefs = app.getSharedPreferences("ange-companion", Context.MODE_PRIVATE)
     private val main = Handler(Looper.getMainLooper())
     private val executor = Executors.newSingleThreadExecutor()
+    private val modelStore = OnDeviceModelStore(app)
+    private val phoneRunner = OnDeviceRunner(app)
     private var pending: Future<*>? = null
     @Volatile private var connection: HttpURLConnection? = null
     private var generation = 0L
@@ -54,7 +57,11 @@ class CompanionController(context: Context) {
     var mouthBeat by mutableStateOf(0); private set
     var microphoneLevel by mutableStateOf(0f); private set
     var backendStatus by mutableStateOf("PC non vérifié"); private set
-    var mode by mutableStateOf(prefs.getString("mode", "offline") ?: "offline")
+    var mode by mutableStateOf(OnDevicePolicy.safeMode(prefs.getString("mode", "ondevice")))
+    var modelReady by mutableStateOf(modelStore.ready()); private set
+    var modelBusy by mutableStateOf(false); private set
+    var modelProgress by mutableStateOf(0f); private set
+    var modelStatus by mutableStateOf(if (modelStore.ready()) "Modèle présent sur le téléphone" else "Modèle à télécharger ou importer une seule fois"); private set
     var language by mutableStateOf(prefs.getString("language", "fr") ?: "fr")
     var serverUrl by mutableStateOf(prefs.getString("server", "") ?: "")
     var accessToken by mutableStateOf(SecureToken.read(app))
@@ -104,10 +111,10 @@ class CompanionController(context: Context) {
         }
     }
 
-    fun send(text: String, cloudConsent: Boolean = false) {
+    fun send(text: String) {
         val clean = text.trim().take(4000)
         if (clean.isEmpty() || closed || !foreground) return
-        if (mode == "cloud" && !cloudConsent) { fail("Autorisez explicitement l’envoi de ce message et de son historique au cloud."); return }
+        if (mode !in setOf("offline", "ondevice", "local")) { fail("Cette version gratuite n’appelle aucune API IA payante."); return }
         stop(false)
         val requestId = generation
         val history = lines.takeLast(20).map { JSONObject().put("role", it.role).put("content", it.content.take(4000)) }
@@ -116,10 +123,28 @@ class CompanionController(context: Context) {
             complete(CompanionPolicy.offline(clean, language), "Mobile limité · sans IA générative")
             return
         }
+        if (mode == "ondevice") {
+            if (!modelStore.ready()) { fail("Téléchargez ou importez d’abord le modèle dans Réglages → IA sur le téléphone."); return }
+            mood = CompanionMood.THINKING
+            status = "ANGE réfléchit sur le téléphone · première ouverture du modèle parfois lente"
+            val prompt = OnDevicePolicy.prompt(clean, lines.dropLast(1).map { it.role to it.content }, language)
+            pending = executor.submit {
+                try {
+                    val reply = phoneRunner.generate(modelStore.file, prompt)
+                    main.post { if (requestId == generation && foreground && !closed) {
+                        complete(reply, "IA téléphone · Qwen3 0.6B · CPU · sans API")
+                        main.postDelayed({ if (requestId == generation && !closed && mood != CompanionMood.THINKING) executor.execute { phoneRunner.unload() } },60000)
+                    } }
+                } catch (error: Exception) {
+                    main.post { if (requestId == generation && foreground && !closed) fail(error.message ?: "Impossible d’exécuter le modèle sur le téléphone.") }
+                }
+            }
+            return
+        }
         mood = CompanionMood.THINKING
-        status = if (mode == "cloud") "ANGE réfléchit · cloud autorisé" else "ANGE réfléchit · modèle local du PC"
+        status = "ANGE réfléchit · modèle local du PC"
         val body = JSONObject().put("message", clean).put("mode", mode).put("language", language)
-            .put("cloud_consent", cloudConsent).put("history", JSONArray(history))
+            .put("cloud_consent", false).put("history", JSONArray(history))
         pending = executor.submit {
             try {
                 val response = request("/v1/chat", "POST", body)
@@ -199,9 +224,7 @@ class CompanionController(context: Context) {
                     val text = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()
                     cancelRecognition()
                     if (text.isNullOrBlank()) fail("Aucun texte reconnu.") else {
-                        // Cloud messages are staged for a separate confirmation in the UI.
-                        if (mode == "cloud") { dictatedText = text; mood = CompanionMood.IDLE; status = "Texte dicté prêt. Confirmez son envoi au cloud." }
-                        else send(text)
+                        send(text)
                     }
                 } }
                 override fun onPartialResults(partialResults: Bundle?) {}
@@ -218,7 +241,6 @@ class CompanionController(context: Context) {
         } catch (_: Exception) { cancelRecognition(); fail("Impossible de démarrer la reconnaissance vocale.") }
     }
 
-    var dictatedText by mutableStateOf("")
     fun permissionDenied() { fail("Le microphone est refusé. Vous pouvez continuer par écrit.") }
     private fun cancelRecognition() {
         recognitionId = null
@@ -227,19 +249,51 @@ class CompanionController(context: Context) {
     }
     fun stop(announce: Boolean = true) {
         generation++
+        if (modelBusy) modelStatus = "Transfert arrêté. Vous pouvez recommencer ou importer le fichier."
+        phoneRunner.cancel(); modelStore.cancel(); modelBusy = false
         pending?.cancel(true); pending = null
         connection?.disconnect(); connection = null
         utteranceId = null
         tts?.stop()
         cancelRecognition()
         mood = CompanionMood.IDLE
+        val idleId = generation
+        main.postDelayed({ if (idleId == generation && !closed && !modelBusy && mood != CompanionMood.THINKING) executor.execute { phoneRunner.unload() } },60000)
         if (announce) status = "Interaction arrêtée."
     }
-    fun clearHistory() { stop(); lines.clear(); lastReply = ""; dictatedText = "" }
-    fun onBackground() { foreground = false; active = false; stop(false); status = "En pause. Aucun microphone en arrière-plan." }
+    fun clearHistory() { stop(); lines.clear(); lastReply = "" }
+    fun onBackground() { foreground = false; active = false; stop(false); executor.execute { phoneRunner.unload() }; status = "En pause. Aucun microphone en arrière-plan." }
     fun onForeground() { foreground = true; active = true }
-    fun close() { closed = true; stop(false); tts?.shutdown(); tts = null; executor.shutdownNow() }
+    fun close() { closed = true; stop(false); tts?.shutdown(); tts = null; executor.execute { phoneRunner.unload() }; executor.shutdown() }
     private fun fail(message: String) { mood = CompanionMood.ERROR; status = message }
+
+    fun downloadModel() = prepareModel(null)
+    fun importModel(uri: Uri) = prepareModel(uri)
+    private fun prepareModel(uri: Uri?) {
+        if (closed || !foreground) return
+        stop(false)
+        val id = generation
+        modelBusy = true; modelProgress = 0f
+        modelStatus = if (uri == null) "Téléchargement du modèle · environ 347 Mo" else "Import et vérification du modèle"
+        pending = executor.submit {
+            try {
+                phoneRunner.unload()
+                val progress: (Long) -> Unit = { bytes -> main.post { if (id == generation && !closed) modelProgress = bytes.toFloat()/OnDevicePolicy.MODEL_BYTES } }
+                if (uri == null) modelStore.download(progress) else modelStore.import(uri,progress)
+                main.post { if (id == generation && !closed) { modelReady = true; modelBusy = false; modelStatus = "Modèle prêt · vérification SHA-256 réussie"; status = "Sélectionnez IA téléphone puis envoyez une question courte." } }
+            } catch (error: Exception) {
+                main.post { if (id == generation && !closed) { modelBusy = false; modelReady = modelStore.ready(); modelStatus = error.message ?: "Import impossible" } }
+            }
+        }
+    }
+    fun removeModel() {
+        stop(false)
+        val id = generation
+        pending = executor.submit {
+            phoneRunner.unload(); modelStore.remove()
+            main.post { if (id == generation && !closed) { modelReady = false; modelStatus = "Modèle supprimé du téléphone." } }
+        }
+    }
 
     fun checkConnection() {
         stop(false)

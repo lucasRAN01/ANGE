@@ -1,6 +1,9 @@
 package com.ange.mobile
 
 import android.provider.Settings
+import android.content.Intent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -70,21 +73,33 @@ fun CompanionAvatar(controller: CompanionController, modifier: Modifier = Modifi
 fun CompanionScreen(controller: CompanionController, onMicrophone: () -> Unit) {
     var draft by rememberSaveable { mutableStateOf("") }
     var configuration by rememberSaveable { mutableStateOf(false) }
-    var cloudMessage by remember { mutableStateOf<String?>(null) }
     var showHistory by rememberSaveable { mutableStateOf(false) }
     var clearConfirm by remember { mutableStateOf(false) }
-    LaunchedEffect(controller.dictatedText) {
-        if (controller.dictatedText.isNotBlank()) { draft = controller.dictatedText; controller.dictatedText = "" }
-    }
+    var downloadConfirm by remember { mutableStateOf(false) }
+    var removeModelConfirm by remember { mutableStateOf(false) }
+    val localContext = LocalContext.current
+    val importModel = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> if (uri != null) controller.importModel(uri) }
     val cyan = Color(0xFF25C9FF)
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
             Column(Modifier.weight(1f)) { Text("Votre compagne ANGE", fontSize = 22.sp, fontWeight = FontWeight.SemiBold); Text("Voix Android · personnage 2D animé", fontSize = 11.sp, color = cyan) }
-            TextButton(onClick = { configuration = !configuration }, modifier = Modifier.width(80.dp)) { Text("Réglages", maxLines = 1) }
+            TextButton(onClick = { configuration = !configuration }, modifier = Modifier.width(80.dp)) { Text("Options", maxLines = 1) }
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            listOf("offline" to "Mobile limité", "local" to "Local PC", "cloud" to "Cloud").forEach { (id, label) ->
+            listOf("offline" to "Simple", "ondevice" to "IA téléphone", "local" to "PC local").forEach { (id, label) ->
                 FilterChip(selected = controller.mode == id, onClick = { controller.stop(); controller.mode = id; controller.saveSettings() }, label = { Text(label, fontSize = 11.sp) })
+            }
+        }
+        if (controller.mode == "ondevice" && !controller.modelReady) {
+            Text("Pour discuter sans PC ni API payante, installez le petit modèle local une seule fois.", fontSize = 12.sp, color = cyan)
+            Text(controller.modelStatus, fontSize = 11.sp)
+            if (controller.modelBusy) {
+                LinearProgressIndicator(progress = { controller.modelProgress }, modifier = Modifier.fillMaxWidth())
+                Text((controller.modelProgress * 100).toInt().toString() + " %", fontSize = 11.sp)
+                OutlinedButton(onClick = { controller.stop() }) { Text("Annuler") }
+            } else Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Button(onClick = { downloadConfirm = true }) { Text("Télécharger · 347 Mo", fontSize = 11.sp) }
+                OutlinedButton(onClick = { importModel.launch(arrayOf("*/*")) }) { Text("Importer", fontSize = 11.sp) }
             }
         }
         CompanionAvatar(controller)
@@ -102,14 +117,14 @@ fun CompanionScreen(controller: CompanionController, onMicrophone: () -> Unit) {
                 .background(Color(0xAA09254B), RoundedCornerShape(14.dp)).padding(16.dp), fontSize = 15.sp)
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Button(onClick = onMicrophone, enabled = controller.mood != CompanionMood.THINKING) { NativeIcon("voice"); Spacer(Modifier.width(7.dp)); Text("Parler") }
+            Button(onClick = onMicrophone, enabled = !controller.modelBusy && controller.mood != CompanionMood.THINKING) { NativeIcon("voice"); Spacer(Modifier.width(7.dp)); Text("Parler") }
             OutlinedButton(onClick = { controller.stop() }) { Text("Arrêter") }
             TextButton(onClick = { controller.speak() }, enabled = controller.lastReply.isNotBlank()) { Text("Relire") }
         }
         OutlinedTextField(value = draft, onValueChange = { draft = it.take(4000) }, label = { Text("Écrivez à ANGE") }, modifier = Modifier.fillMaxWidth(), minLines = 2, maxLines = 6)
         Button(onClick = {
-            if (controller.mode == "cloud") cloudMessage = draft else { controller.send(draft); draft = "" }
-        }, enabled = draft.isNotBlank() && controller.mood != CompanionMood.THINKING, modifier = Modifier.fillMaxWidth()) { Text("Envoyer") }
+            controller.send(draft); draft = ""
+        }, enabled = !controller.modelBusy && draft.isNotBlank() && controller.mood != CompanionMood.THINKING, modifier = Modifier.fillMaxWidth()) { Text("Envoyer") }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             TextButton(onClick = { showHistory = !showHistory }) { Text("Historique de session (${controller.lines.size})") }
             TextButton(onClick = { clearConfirm = true }) { Text("Effacer") }
@@ -120,6 +135,16 @@ fun CompanionScreen(controller: CompanionController, onMicrophone: () -> Unit) {
         }
         if (configuration) {
             HorizontalDivider()
+            Text("IA sur le téléphone", color = cyan, fontSize = 18.sp)
+            Text(OnDevicePolicy.MODEL_NAME + "\n" + controller.modelStatus, fontSize = 12.sp)
+            Text("Modèle libre Apache 2.0 · aucune clé ni serveur. CPU limité à deux threads, réponses courtes. Les performances sur Galaxy A53 restent à mesurer.", fontSize = 11.sp)
+            if (controller.modelBusy) LinearProgressIndicator(progress = { controller.modelProgress }, modifier = Modifier.fillMaxWidth())
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                OutlinedButton(onClick = { downloadConfirm = true }, enabled = !controller.modelBusy) { Text("Télécharger", fontSize = 11.sp) }
+                OutlinedButton(onClick = { importModel.launch(arrayOf("*/*")) }, enabled = !controller.modelBusy) { Text("Importer", fontSize = 11.sp) }
+                TextButton(onClick = { removeModelConfirm = true }, enabled = !controller.modelBusy && controller.modelReady) { Text("Supprimer", fontSize = 11.sp) }
+            }
+            if (controller.modelBusy) OutlinedButton(onClick = { controller.stop() }) { Text("Arrêter le transfert") }
             Text("Voix et mouvements", color = cyan, fontSize = 18.sp)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf("fr" to "FR", "en" to "EN", "mg" to "MG").forEach { (code, label) ->
@@ -138,9 +163,11 @@ fun CompanionScreen(controller: CompanionController, onMicrophone: () -> Unit) {
                 }
             }
             OutlinedButton(onClick = { controller.greet() }) { Text("Tester la salutation et la voix") }
+            TextButton(onClick = { try { localContext.startActivity(Intent("com.android.settings.TTS_SETTINGS")) } catch (_: Exception) { localContext.startActivity(Intent(Settings.ACTION_SETTINGS)) } }) { Text("Réglages vocaux du téléphone") }
             SettingToggle("Reconnaissance vocale réseau autorisée", controller.allowNetworkRecognition) { controller.allowNetworkRecognition = it }
             Text("Si la reconnaissance locale est indisponible, le service vocal Android peut envoyer votre audio à son fournisseur. Aucune écoute continue ni en arrière-plan.", fontSize = 11.sp)
-            Text("Connexion au PC", color = cyan, fontSize = 18.sp)
+            if (controller.mode == "local") {
+            Text("Connexion facultative au PC", color = cyan, fontSize = 18.sp)
             OutlinedTextField(value = controller.serverUrl, onValueChange = { controller.serverUrl = it.take(300) }, label = { Text("https://nom-du-pc:8765") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
             OutlinedTextField(value = controller.accessToken, onValueChange = { controller.accessToken = it.take(256) }, label = { Text("Jeton ANGE Core, pas une clé de fournisseur IA") }, visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth(), singleLine = true)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -148,14 +175,16 @@ fun CompanionScreen(controller: CompanionController, onMicrophone: () -> Unit) {
                 TextButton(onClick = { controller.accessToken = ""; controller.saveSettings() }) { Text("Oublier le jeton") }
             }
             Text(controller.backendStatus, fontSize = 12.sp)
-            Text("Le jeton est protégé par Android Keystore. Les clés cloud restent sur le PC. Aucun basculement automatique du local vers le cloud.", fontSize = 11.sp)
+            Text("Le jeton est protégé par Android Keystore. Le mode IA téléphone n’utilise pas cette connexion.", fontSize = 11.sp)
+            }
         }
-        Text("Animation 2D par poses. Bouche synchronisée approximativement à la lecture, sans capture de visage ni animation 3D. Le mode Mobile limité n’est pas une IA générative.", fontSize = 10.sp, color = Color(0xFF93B4D0))
+        Text("Animation 2D par poses, synchronisation vocale approximative. Le mode Simple répond à quelques commandes. IA téléphone génère du texte localement, peut se tromper et ne contrôle pas les applications.", fontSize = 10.sp, color = Color(0xFF93B4D0))
     }
-    cloudMessage?.let { text -> AlertDialog(onDismissRequest = { cloudMessage = null }, title = { Text("Envoyer au cloud ?") },
-        text = { Text("Ce message et jusqu’à 20 messages de cette session seront transmis par le PC au fournisseur cloud configuré. Des frais peuvent s’appliquer. Aucun envoi n’a lieu avant votre confirmation.") },
-        confirmButton = { TextButton(onClick = { controller.send(text, true); cloudMessage = null; draft = "" }) { Text("Autoriser cet envoi") } },
-        dismissButton = { TextButton(onClick = { cloudMessage = null }) { Text("Annuler") } }) }
+    if (downloadConfirm) AlertDialog(onDismissRequest = { downloadConfirm = false }, title = { Text("Télécharger le modèle gratuit ?") },
+        text = { Text("Environ 347 Mo seront téléchargés depuis Hugging Face, puis vérifiés. Ce modèle est sous licence Apache 2.0. Aucune conversation n’est envoyée. Le téléchargement utilise votre connexion Internet ; privilégiez le Wi-Fi. Gardez l’application ouverte. Source : " + OnDevicePolicy.MODEL_PAGE) },
+        confirmButton = { TextButton(onClick = { downloadConfirm = false; controller.downloadModel() }) { Text("Télécharger") } }, dismissButton = { TextButton(onClick = { downloadConfirm = false }) { Text("Annuler") } })
+    if (removeModelConfirm) AlertDialog(onDismissRequest = { removeModelConfirm = false }, title = { Text("Supprimer le modèle local ?") }, text = { Text("Il faudra le télécharger ou l’importer à nouveau pour utiliser IA téléphone.") },
+        confirmButton = { TextButton(onClick = { removeModelConfirm = false; controller.removeModel() }) { Text("Supprimer") } }, dismissButton = { TextButton(onClick = { removeModelConfirm = false }) { Text("Annuler") } })
     if (clearConfirm) AlertDialog(onDismissRequest = { clearConfirm = false }, title = { Text("Effacer la session ?") }, text = { Text("Cela supprime les messages en mémoire sur ce téléphone. Une requête déjà transmise au fournisseur ne peut pas être retirée.") },
         confirmButton = { TextButton(onClick = { controller.clearHistory(); clearConfirm = false }) { Text("Effacer") } }, dismissButton = { TextButton(onClick = { clearConfirm = false }) { Text("Annuler") } })
 }

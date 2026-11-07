@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.ange.mobile.CompanionPolicyTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-07T09:24:51" hostname="LUCAS" time="0.156">
+  <properties/>
+  <testcase name="animationCanBeStopped" classname="com.ange.mobile.CompanionPolicyTest" time="0.007"/>
+  <testcase name="httpsAllowed" classname="com.ange.mobile.CompanionPolicyTest" time="0.062"/>
+  <testcase name="offlineAnswersAreLimitedAndDeterministic" classname="com.ange.mobile.CompanionPolicyTest" time="0.041"/>
+  <testcase name="rejectsUnsafeAddresses" classname="com.ange.mobile.CompanionPolicyTest" time="0.017"/>
+  <testcase name="emulatorHttpDebugOnly" classname="com.ange.mobile.CompanionPolicyTest" time="0.001"/>
+  <testcase name="speakingUsesAllMouthPoses" classname="com.ange.mobile.CompanionPolicyTest" time="0.026"/>
+  <testcase name="idleBlinksAndStatesRemainInAtlas" classname="com.ange.mobile.CompanionPolicyTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

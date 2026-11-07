@@ -22,6 +22,8 @@ __pycache__/
 build/
 *.apk
 *.aab
+*.litertlm
+*.gguf
 node_modules/
 *.zip
 *.zip.sha256
@@ -29,3 +31,4 @@ node_modules/
 # Voluminous working evidence is downloadable separately
 docs/verification/*.png
 !docs/verification/reference-reproduction.png
+!docs/verification/phone-response.png

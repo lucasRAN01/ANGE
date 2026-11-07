@@ -1,0 +1,8 @@
+
+com.ange.mobile.PhoneInferenceSmokeTest:.
+
+Time: 57.548
+
+OK (1 test)
+
+

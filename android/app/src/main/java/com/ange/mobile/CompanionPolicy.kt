@@ -32,17 +32,17 @@ object CompanionPolicy {
             "time" in lower -> "It is $time."
             "date" in lower || "day" in lower -> "Today is $date."
             "hello" in lower || "hi" == lower -> "Hello! I'm ANGE. In limited mobile mode I can tell you the time and date, and read text aloud."
-            else -> "Limited mobile mode is active, without a generative AI. Choose Local PC or Cloud for an intelligent conversation."
+            else -> "Simple mode is active, without generative AI. Choose Phone AI or Local PC for a conversation."
         }
         if (language == "mg") return when {
             "salama" in lower -> "Salama! Izaho no ANGE. Voafetra ny fomba tsy misy IA."
-            else -> "Tsy misy IA generativa eto amin’ity fomba ity. Safidio ny Local PC na Cloud."
+            else -> "Tsy misy IA generativa eto amin’ity fomba ity. Safidio ny IA téléphone na PC local."
         }
         return when {
             "heure" in lower -> "Il est $time."
             "date" in lower || "quel jour" in lower -> "Nous sommes le $date."
             "bonjour" in lower || "salut" in lower -> "Bonjour ! Je suis ANGE. En mode mobile limité, je peux donner l’heure, la date et lire les réponses."
-            else -> "Le mode mobile limité est actif, sans IA générative. Choisissez Local PC ou Cloud pour une conversation intelligente."
+            else -> "Le mode Simple est actif, sans IA générative. Choisissez IA téléphone ou PC local pour une conversation."
         }
     }
 }

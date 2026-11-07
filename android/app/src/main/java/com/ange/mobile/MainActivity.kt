@@ -138,7 +138,7 @@ fun AngeApp(companion: CompanionController) {
                         }
                     }
                 }
-                Text("ANGE COMPANION · " + when(companion.mode) { "local" -> "IA LOCALE SUR PC"; "cloud" -> "CLOUD AVEC AUTORISATION"; else -> "MOBILE LIMITÉ" }, color = Cyan, fontSize = 10.sp)
+                Text("ANGE COMPANION · " + when(companion.mode) { "local" -> "IA LOCALE SUR PC"; "ondevice" -> "IA SUR LE TÉLÉPHONE"; else -> "MODE SIMPLE" }, color = Cyan, fontSize = 10.sp)
                 when (page) {
                     0 -> Panel("Démarrage") {
                         Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { Orb() }

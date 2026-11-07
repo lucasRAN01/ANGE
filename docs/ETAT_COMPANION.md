@@ -1,5 +1,7 @@
 # État de la livraison Companion
 
+Ce document décrit les essais de la version 2.0.0 PC/cloud. La variante Android 2.0.1-phone remplace le cloud mobile par l’inférence sur téléphone ; ses réglages et ses résultats propres sont dans [TELEPHONE_GRATUIT.md](TELEPHONE_GRATUIT.md) et [ETAT_PHONE.md](ETAT_PHONE.md).
+
 Cette révision poursuit le design fidèle, et ajoute une première chaîne fonctionnelle de compagne mobile et de conversation PC. Elle ne termine pas toutes les phases de A.docx.
 
 ## Réalisé
