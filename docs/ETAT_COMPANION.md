@@ -23,6 +23,8 @@ Le serveur écoute en boucle locale par défaut. Un lancement sur une adresse LA
 
 Les résultats machine et captures sont dans `docs/verification`. Les tests d’API utilisent des réponses simulées des fournisseurs et ne prouvent pas la qualité d’un modèle installé. Aucun appel cloud payant ou installation d’un modèle lourd n’a été effectué.
 
+Contrôle complémentaire dans l’émulateur : saisie de « Quelle heure est-il », envoi et affichage d’une réponse horaire locale observés. Le moteur TTS de cet émulateur a renvoyé une erreur de lecture, correctement affichée par l’application ; aucun son audible réussi n’est donc revendiqué. La lecture doit être validée sur le téléphone avec une voix réellement installée et fonctionnelle. Le test de navigation par inspection visuelle a été utilisé car l’outil de hiérarchie UI de cet émulateur renvoyait un nœud racine indisponible.
+
 ## Essais restant nécessaires
 
 Voix réellement audible sur téléphone, disponibilité d’une voix française féminine et malgache, reconnaissance des accents, interruption de lecture sur plusieurs moteurs, rotation, restauration, Android 16 et consommation mesurée sur le matériel Ryzen 5 / 8 Go. La connexion HTTPS téléphone-PC et une génération avec le modèle choisi par l’utilisateur doivent aussi être validées dans son réseau.
