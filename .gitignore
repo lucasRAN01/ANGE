@@ -19,6 +19,7 @@ access-token.txt
 __pycache__/
 .pytest_cache/
 .gradle/
+.kotlin/
 build/
 *.apk
 *.aab
@@ -33,3 +34,4 @@ docs/verification/*.png
 !docs/verification/reference-reproduction.png
 !docs/verification/phone-response.png
 !docs/verification/bot-3d.png
+!docs/verification/jarvis-memory.png

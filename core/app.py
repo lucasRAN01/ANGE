@@ -12,6 +12,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, field_validator
 from engine import Config, Engine, EngineError
+from jarvis_adapter import JarvisMemory, REVISION
 
 class Turn(BaseModel):
     role: Literal["user", "assistant"]
@@ -40,10 +41,23 @@ class Note(BaseModel):
             raise ValueError("Note vide")
         return value.strip()
 
+class MemoryItem(BaseModel):
+    category: Literal["preferences", "people", "projects", "facts"] = "facts"
+    text: str = Field(min_length=1, max_length=4000)
+    key: str = Field(default="", max_length=80)
+
+class ForgetMemory(BaseModel):
+    subject: str = Field(min_length=1, max_length=200)
+    confirmed: bool = False
+
+class EraseMemory(BaseModel):
+    confirmed: bool = False
+
 def create_app(config=None, transport=None):
     config = config or Config.from_env()
     db_path = Path(config.database)
     db_path.parent.mkdir(parents=True, exist_ok=True)
+    memory = JarvisMemory(db_path.parent / "jarvis-memory")
     with sqlite3.connect(db_path) as db:
         db.execute("CREATE TABLE IF NOT EXISTS notes (id INTEGER PRIMARY KEY, text TEXT NOT NULL, created REAL NOT NULL)")
     @asynccontextmanager
@@ -51,7 +65,7 @@ def create_app(config=None, transport=None):
         async with httpx.AsyncClient(timeout=90, transport=transport, follow_redirects=False, trust_env=False) as client:
             application.state.engine = Engine(config, client)
             yield
-    app = FastAPI(title="ANGE Core Companion", version="0.3.0", lifespan=lifespan,
+    app = FastAPI(title="ANGE Core Companion", version="0.4.0", lifespan=lifespan,
                   docs_url=None, redoc_url=None, openapi_url=None)
     bearer = HTTPBearer(auto_error=False)
     semaphore = asyncio.Semaphore(1)  # One model request at a time on an 8 GB machine.
@@ -79,14 +93,39 @@ def create_app(config=None, transport=None):
 
     @app.get("/health")
     def health():
-        return {"service": "ANGE Core", "version": "0.3.0"}
+        return {"service": "ANGE Core", "version": "0.4.0"}
 
     @app.get("/v1/status", dependencies=[Depends(authenticated)])
     def status():
         return {"local_configured": bool(config.ollama_model),
                 "cloud_configured": bool(config.cloud_key and config.cloud_model),
                 "local_model": config.ollama_model or None, "cloud_model": config.cloud_model or None,
-                "tools": False, "automatic_cloud_fallback": False}
+                "tools": False, "automatic_cloud_fallback": False,
+                "jarvis_revision": REVISION, "structured_memory": True}
+
+    @app.get("/v1/memory", dependencies=[Depends(authenticated)])
+    def read_memory(query: str = ""):
+        if len(query) > 200: raise HTTPException(422, "Recherche trop longue")
+        return {"entries": memory.recall(query), "source": "Jarvis", "revision": REVISION}
+
+    @app.post("/v1/memory", dependencies=[Depends(authenticated)], status_code=201)
+    def remember(body: MemoryItem):
+        try: memory.remember(body.category, body.text, body.key)
+        except ValueError as exc: raise HTTPException(422, str(exc))
+        return {"stored": True, "source": "Jarvis"}
+
+    @app.post("/v1/memory/forget", dependencies=[Depends(authenticated)])
+    def forget(body: ForgetMemory):
+        if not body.confirmed: raise HTTPException(403, "Confirmation d’oubli requise")
+        try: removed = memory.forget(body.subject)
+        except ValueError as exc: raise HTTPException(422, str(exc))
+        return {"removed": removed, "recovery_copy": bool(removed)}
+
+    @app.post("/v1/memory/erase", dependencies=[Depends(authenticated)])
+    def erase(body: EraseMemory):
+        if not body.confirmed: raise HTTPException(403, "Confirmation d’effacement requise")
+        memory.erase()
+        return {"erased": True, "recovery_copies_erased": True}
 
     @app.post("/v1/chat", dependencies=[Depends(authenticated)])
     async def chat(body: Chat):

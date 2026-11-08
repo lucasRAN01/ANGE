@@ -28,8 +28,7 @@ sealed interface ActionParse {
 
 /** Only explicit user commands enter this parser. Model output is never executed. */
 object DeviceActionPolicy {
-    fun normalized(value: String): String = Normalizer.normalize(value,Normalizer.Form.NFD)
-        .replace(Regex("\\p{M}+"), "").lowercase(Locale.ROOT).trim().replace(Regex("\\s+"), " ")
+    fun normalized(value: String): String = JarvisVoice.withoutAccents(value).trim().replace(Regex("\\s+"), " ")
     fun parse(input: String, apps: List<LaunchableApp>): ActionParse {
         val original = input.trim().replace(Regex("^(?:hey\\s+)?ange[, :]+",RegexOption.IGNORE_CASE), "")
         val text = normalized(original).trimEnd('.', '!', '?').trim()

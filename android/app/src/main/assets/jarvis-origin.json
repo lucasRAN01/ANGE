@@ -1,0 +1,18 @@
+{
+  "repository": "https://github.com/sosoj92/jarvis-assistant-vocal",
+  "revision": "15f3f87e0bfd3fe68ec38deafbfeab22636c3993",
+  "license": "MIT",
+  "copyright": "2026 sosoj92",
+  "runtime_python_modules": [
+    "core/memoire.py",
+    "core/util.py",
+    "core/confidentialite.py"
+  ],
+  "android_ports": [
+    "core/memoire.py",
+    "tools/memoire.py",
+    "core/util.py",
+    "core/confidentialite.py"
+  ],
+  "other_modules": "retained as a pinned reference, not automatically loaded"
+}

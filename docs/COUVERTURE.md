@@ -1,5 +1,7 @@
 # Couverture de la livraison fidèle
 
+Document historique du prototype de design initial. Les fonctions ajoutées ensuite sont décrites dans `ETAT_BOT_ACTIONS.md` et `JARVIS_INTEGRATION.md` ; les anciennes mentions d’absence totale d’audio ou de code Jarvis ne décrivent pas la version 2.2 actuelle.
+
 | Écran | Windows | Android natif | Limite |
 |---|---|---|---|
 | 01 Démarrage | Logo, noyau lumineux, progression visuelle, entrée | Noyau illustré et entrée | Aucun chargement de modules IA |

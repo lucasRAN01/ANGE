@@ -83,6 +83,7 @@ fun CompanionScreen(controller: CompanionController, onMicrophone: () -> Unit) {
     var downloadConfirm by remember { mutableStateOf(false) }
     var removeModelConfirm by remember { mutableStateOf(false) }
     var actions by remember { mutableStateOf(false) }
+    var jarvisLicense by remember { mutableStateOf(false) }
     val localContext = LocalContext.current
     val importModel = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> if (uri != null) controller.importModel(uri) }
     val cyan = Color(0xFF25C9FF)
@@ -170,6 +171,9 @@ fun CompanionScreen(controller: CompanionController, onMicrophone: () -> Unit) {
             }
             SettingToggle("Lire les réponses à voix haute", controller.autoSpeak) { controller.autoSpeak = it; controller.saveSettings() }
             SettingToggle("Animations du personnage", controller.animations) { controller.animations = it; controller.saveSettings() }
+            SettingToggle("Masquer les infos sensibles à la lecture",controller.privateVoice) { controller.privateVoice=it; controller.saveSettings() }
+            Text("Filtre vocal dérivé de Jarvis : mails, numéros et jetons courants. Le texte affiché est conservé. Ce filtre reste imparfait.",fontSize=11.sp)
+            TextButton(onClick={ jarvisLicense=true }) { Text("Base Jarvis · origine et licence MIT") }
             SettingToggle("Autoriser une voix réseau", controller.allowNetworkVoice) { controller.allowNetworkVoice = it }
             Text("Une voix réseau peut transmettre le texte au moteur vocal installé. Autorisation valable pour cette session.", fontSize = 11.sp)
             val voices = controller.availableVoices.filter { it.locale.language == controller.language && (!it.isNetworkConnectionRequired || controller.allowNetworkVoice) }
@@ -198,6 +202,13 @@ fun CompanionScreen(controller: CompanionController, onMicrophone: () -> Unit) {
         Text("Bot en vraie 3D procédurale ou portrait en huit poses 2D. Synchronisation vocale approximative. Les commandes Android explicites utilisent les fonctions des applications ; les réponses du modèle ne déclenchent aucune action.", fontSize = 10.sp, color = Color(0xFF93B4D0))
     }
     if(actions) DeviceActionsDialog(controller,onDismiss={ actions=false })
+    if(jarvisLicense) {
+        val license=remember { localContext.assets.open("licenses/jarvis-MIT.txt").bufferedReader().use { it.readText() } }
+        AlertDialog(onDismissRequest={ jarvisLicense=false },title={ Text("Base Jarvis · MIT") },
+            text={ Column(Modifier.heightIn(max=400.dp).verticalScroll(rememberScrollState())) {
+                Text("sosoj92/jarvis-assistant-vocal\nRévision 15f3f87e0bfd3fe68ec38deafbfeab22636c3993\nPorts Android : mémoire, nettoyage et confidentialité vocale. Le moteur Python complet n’est pas exécuté dans cet APK.\n\n"+license,fontSize=12.sp)
+            } },confirmButton={ TextButton(onClick={ jarvisLicense=false }) { Text("Fermer") } })
+    }
     controller.pendingAction?.let { action -> AlertDialog(onDismissRequest={ controller.cancelAction() },title={ Text(action.title) },text={ Text(action.detail) },
         confirmButton={ TextButton(onClick={ controller.confirmAction() }) { Text("Continuer") } },dismissButton={ TextButton(onClick={ controller.cancelAction() }) { Text("Annuler") } }) }
     if (downloadConfirm) AlertDialog(onDismissRequest = { downloadConfirm = false }, title = { Text("Télécharger le modèle gratuit ?") },

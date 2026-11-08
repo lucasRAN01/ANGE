@@ -41,6 +41,10 @@ class CompanionController(context: Context) {
     private val phoneRunner = OnDeviceRunner(app)
     private val deviceActions = AndroidDeviceActions(context)
     private val actionEngine = "Commandes Android"
+    private val jarvisMemory=JarvisMemoryStore(app)
+    var memoryEntries by mutableStateOf<List<JarvisMemoryEntry>>(emptyList()); private set
+    var memoryStatus by mutableStateOf("Chargement de la mémoire locale…"); private set
+    var privateVoice by mutableStateOf(prefs.getBoolean("privateVoice",true))
     var availableApps by mutableStateOf<List<LaunchableApp>>(emptyList()); private set
     var pendingAction by mutableStateOf<DeviceAction?>(null); private set
     var handsFree by mutableStateOf(false); private set
@@ -80,6 +84,7 @@ class CompanionController(context: Context) {
 
     init {
         refreshApps()
+        refreshMemory()
         tts = TextToSpeech(app) { code -> main.post {
             if (!closed) {
                 speechReady = code == TextToSpeech.SUCCESS
@@ -116,7 +121,7 @@ class CompanionController(context: Context) {
 
     fun saveSettings() {
         prefs.edit().putString("mode", mode).putString("language", language).putString("server", serverUrl)
-            .putString("voice", selectedVoice).putBoolean("animations", animations).putBoolean("autoSpeak", autoSpeak).putBoolean("avatar3D",avatar3D).apply()
+            .putString("voice", selectedVoice).putBoolean("animations", animations).putBoolean("autoSpeak", autoSpeak).putBoolean("avatar3D",avatar3D).putBoolean("privateVoice",privateVoice).apply()
         try { SecureToken.write(app, accessToken.trim()) } catch (_: Exception) {
             status = "Jeton utilisable en mémoire, mais sauvegarde chiffrée indisponible."
         }
@@ -175,12 +180,13 @@ class CompanionController(context: Context) {
     }
 
     private fun complete(reply: String, engine: String) {
-        lastReply = reply
-        lines.add(DialogueLine("assistant", reply, engine))
+        val clean=JarvisVoice.clean(reply).ifBlank { reply }
+        lastReply = clean
+        lines.add(DialogueLine("assistant", clean, engine))
         while (lines.size > 40) lines.removeAt(0)
         mood = CompanionMood.IDLE
         status = engine
-        if (autoSpeak || handsFree) speak(reply)
+        if (autoSpeak || handsFree) speak(clean)
     }
 
     fun greet() {
@@ -205,7 +211,8 @@ class CompanionController(context: Context) {
         tts?.voice = voice
         tts?.setSpeechRate(0.94f)
         utteranceId = UUID.randomUUID().toString()
-        val code = tts?.speak(text.take(TextToSpeech.getMaxSpeechInputLength()), TextToSpeech.QUEUE_FLUSH, Bundle(), utteranceId)
+        val spoken=JarvisVoice.spoken(text,privateVoice)
+        val code = tts?.speak(spoken.take(TextToSpeech.getMaxSpeechInputLength()), TextToSpeech.QUEUE_FLUSH, Bundle(), utteranceId)
         if (code == TextToSpeech.ERROR) { utteranceId = null; fail("La voix Android a refusé la lecture.") }
     }
 
@@ -317,6 +324,23 @@ class CompanionController(context: Context) {
     fun rendererFailed(message: String) {
         if(closed) return
         avatar3D=false; saveSettings(); status="Affichage 3D indisponible : ${message.take(120)}. Portrait 2D activé."
+    }
+    fun refreshMemory() = memoryTask { "Mémoire locale Jarvis · ${jarvisMemory.recall().size} souvenir(s)" }
+    fun rememberMemory(category: String,text: String,key: String) = memoryTask {
+        jarvisMemory.remember(category,text,key); "Souvenir enregistré uniquement sur ce téléphone."
+    }
+    fun forgetMemory(subject: String) = memoryTask {
+        "${jarvisMemory.forget(subject)} souvenir(s) oublié(s). Une copie de récupération locale est conservée."
+    }
+    fun eraseMemory() = memoryTask { jarvisMemory.erase(); "Mémoire et copie de récupération effacées sur ce téléphone." }
+    private fun memoryTask(operation: () -> String) {
+        if(closed) return
+        executor.execute {
+            try {
+                val result=operation(); val entries=jarvisMemory.recall()
+                main.post { if(!closed) { memoryEntries=entries; memoryStatus=result } }
+            } catch(error: Exception) { main.post { if(!closed) memoryStatus=error.message ?: "Mémoire inaccessible" } }
+        }
     }
     private fun executeAction(action: DeviceAction) {
         try { complete(deviceActions.execute(action),actionEngine) }

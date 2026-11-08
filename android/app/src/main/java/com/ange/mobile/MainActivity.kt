@@ -171,22 +171,7 @@ fun AngeApp(companion: CompanionController) {
                         Text("Mode choisi : ${companion.mode}\n${companion.backendStatus}\nRAM / CPU / latence : non mesurés")
                         Text("États techniques uniquement. Aucune pensée interne du modèle.")
                     }
-                    6 -> Panel("Mémoire de session") {
-                        Text("Notes temporaires du prototype. Aucun stockage Room, chiffrement, export ou synchronisation sur Android. Ne pas saisir de données sensibles.")
-                        OutlinedTextField(value = note, onValueChange = { note = it.take(2000) }, label = { Text("Note volontaire") }, modifier = Modifier.fillMaxWidth())
-                        Button(onClick = {
-                            if (note.isNotBlank()) {
-                                val next = ArrayList(notes.value)
-                                if (editIndex in next.indices) next[editIndex] = note else next.add(note)
-                                notes.value = next; note = ""; editIndex = -1
-                            }
-                        }) { Text(if (editIndex < 0) "Ajouter" else "Enregistrer") }
-                        notes.value.forEachIndexed { i, text ->
-                            Text(text, color = Ice)
-                            Row { TextButton(onClick = { note = text; editIndex = i }) { Text("Modifier") }
-                                TextButton(onClick = { pending = "delete:$i" }) { Text("Supprimer") } }
-                        }
-                    }
+                    6 -> Panel("Mémoire locale · base Jarvis") { JarvisMemoryScreen(companion) }
                     7 -> Panel("ANGE Link") {
                         Orb()
                         Text("PC : non connecté\nAndroid : non appairé\nWi-Fi : non vérifié")

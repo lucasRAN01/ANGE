@@ -2,6 +2,7 @@
 from dataclasses import dataclass
 import os
 import httpx
+from jarvis_adapter import util as jarvis_util, confidentialite
 
 SYSTEM = (
     "Tu es ANGE, une compagne IA personnelle calme, chaleureuse, respectueuse et concise. "
@@ -71,7 +72,10 @@ class Engine:
                 model = self.config.cloud_model
             if not isinstance(text, str) or not text.strip():
                 raise EngineError("Le moteur n'a pas fourni de réponse textuelle exploitable.", 502)
-            return {"reply": text.strip()[:12000], "engine": mode, "model": model}
+            reply = jarvis_util.nettoyer_reponse_vocale(text)[:12000]
+            if not reply:
+                raise EngineError("Réponse vide après nettoyage vocal.", 502)
+            return {"reply": reply, "speech_reply": confidentialite.filtrer(reply, 4000), "engine": mode, "model": model}
         except httpx.TimeoutException:
             raise EngineError("Le moteur a dépassé le délai. Aucun autre fournisseur n'a été appelé.", 504)
         except httpx.HTTPStatusError as exc:
