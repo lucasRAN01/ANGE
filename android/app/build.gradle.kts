@@ -11,8 +11,8 @@ android {
         applicationId = "com.ange.mobile"
         minSdk = 26
         targetSdk = 35
-        versionCode = 2
-        versionName = "2.0.1-phone"
+        versionCode = 3
+        versionName = "2.1.0-bot-actions"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     buildFeatures { compose = true; buildConfig = true }

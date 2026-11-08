@@ -1,0 +1,2 @@
+--------- beginning of main
+11-08 14:06:24.577  1990  2516 I ANGE-Phone-Test: CPU reply in 40188 ms: Organisez votre journée en planissant le début et en élargissant le début. Pratiquez-vous pour vous motiver.

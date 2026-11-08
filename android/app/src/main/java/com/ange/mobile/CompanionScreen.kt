@@ -9,6 +9,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -35,6 +39,7 @@ import kotlin.math.sin
 
 @Composable
 fun CompanionAvatar(controller: CompanionController, modifier: Modifier = Modifier) {
+    if(controller.avatar3D) { RobotCompanion3D(controller); return }
     val atlas = ImageBitmap.imageResource(R.drawable.companion_atlas)
     val context = LocalContext.current
     val systemMotion = remember { Settings.Global.getFloat(context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) > 0f }
@@ -77,13 +82,21 @@ fun CompanionScreen(controller: CompanionController, onMicrophone: () -> Unit) {
     var clearConfirm by remember { mutableStateOf(false) }
     var downloadConfirm by remember { mutableStateOf(false) }
     var removeModelConfirm by remember { mutableStateOf(false) }
+    var actions by remember { mutableStateOf(false) }
     val localContext = LocalContext.current
     val importModel = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> if (uri != null) controller.importModel(uri) }
     val cyan = Color(0xFF25C9FF)
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-            Column(Modifier.weight(1f)) { Text("Votre compagne ANGE", fontSize = 22.sp, fontWeight = FontWeight.SemiBold); Text("Voix Android · personnage 2D animé", fontSize = 11.sp, color = cyan) }
+            Column(Modifier.weight(1f)) { Text("Votre compagne ANGE", fontSize = 22.sp, fontWeight = FontWeight.SemiBold); Text("Voix Android · bot 3D ou portrait animé", fontSize = 11.sp, color = cyan) }
             TextButton(onClick = { configuration = !configuration }, modifier = Modifier.width(80.dp)) { Text("Options", maxLines = 1) }
+        }
+        Row(horizontalArrangement=Arrangement.spacedBy(7.dp),verticalAlignment=Alignment.CenterVertically) {
+            FilterChip(selected=controller.avatar3D,onClick={ controller.avatar3D=true; controller.saveSettings() },label={ Text("Bot 3D",fontSize=11.sp) })
+            FilterChip(selected=!controller.avatar3D,onClick={ controller.avatar3D=false; controller.saveSettings() },label={ Text("Portrait 2D",fontSize=11.sp) })
+            TextButton(onClick={ actions=true; controller.refreshApps() }) { Text("Actions") }
+            Button(onClick=onMicrophone,enabled=!controller.modelBusy && controller.mood!=CompanionMood.THINKING,
+                contentPadding=PaddingValues(horizontal=10.dp,vertical=4.dp)) { Text("Parler",fontSize=11.sp) }
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             listOf("offline" to "Simple", "ondevice" to "IA téléphone", "local" to "PC local").forEach { (id, label) ->
@@ -121,6 +134,10 @@ fun CompanionScreen(controller: CompanionController, onMicrophone: () -> Unit) {
             OutlinedButton(onClick = { controller.stop() }) { Text("Arrêter") }
             TextButton(onClick = { controller.speak() }, enabled = controller.lastReply.isNotBlank()) { Text("Relire") }
         }
+        OutlinedButton(onClick={ if(controller.handsFree) controller.stop() else if(controller.enableHandsFree()) onMicrophone() },enabled=!controller.modelBusy && controller.mood!=CompanionMood.THINKING,modifier=Modifier.fillMaxWidth()) {
+            Text(if(controller.handsFree) "Discussion active · arrêter" else "Discussion vocale · démarrer",fontSize=12.sp)
+        }
+        if(controller.handsFree) Text("Le micro se rouvre après la réponse, uniquement tant qu’ANGE reste au premier plan. Arrêter termine la discussion.",fontSize=11.sp,color=cyan)
         OutlinedTextField(value = draft, onValueChange = { draft = it.take(4000) }, label = { Text("Écrivez à ANGE") }, modifier = Modifier.fillMaxWidth(), minLines = 2, maxLines = 6)
         Button(onClick = {
             controller.send(draft); draft = ""
@@ -178,8 +195,11 @@ fun CompanionScreen(controller: CompanionController, onMicrophone: () -> Unit) {
             Text("Le jeton est protégé par Android Keystore. Le mode IA téléphone n’utilise pas cette connexion.", fontSize = 11.sp)
             }
         }
-        Text("Animation 2D par poses, synchronisation vocale approximative. Le mode Simple répond à quelques commandes. IA téléphone génère du texte localement, peut se tromper et ne contrôle pas les applications.", fontSize = 10.sp, color = Color(0xFF93B4D0))
+        Text("Bot en vraie 3D procédurale ou portrait en huit poses 2D. Synchronisation vocale approximative. Les commandes Android explicites utilisent les fonctions des applications ; les réponses du modèle ne déclenchent aucune action.", fontSize = 10.sp, color = Color(0xFF93B4D0))
     }
+    if(actions) DeviceActionsDialog(controller,onDismiss={ actions=false })
+    controller.pendingAction?.let { action -> AlertDialog(onDismissRequest={ controller.cancelAction() },title={ Text(action.title) },text={ Text(action.detail) },
+        confirmButton={ TextButton(onClick={ controller.confirmAction() }) { Text("Continuer") } },dismissButton={ TextButton(onClick={ controller.cancelAction() }) { Text("Annuler") } }) }
     if (downloadConfirm) AlertDialog(onDismissRequest = { downloadConfirm = false }, title = { Text("Télécharger le modèle gratuit ?") },
         text = { Text("Environ 347 Mo seront téléchargés depuis Hugging Face, puis vérifiés. Ce modèle est sous licence Apache 2.0. Aucune conversation n’est envoyée. Le téléchargement utilise votre connexion Internet ; privilégiez le Wi-Fi. Gardez l’application ouverte. Source : " + OnDevicePolicy.MODEL_PAGE) },
         confirmButton = { TextButton(onClick = { downloadConfirm = false; controller.downloadModel() }) { Text("Télécharger") } }, dismissButton = { TextButton(onClick = { downloadConfirm = false }) { Text("Annuler") } })
@@ -187,6 +207,38 @@ fun CompanionScreen(controller: CompanionController, onMicrophone: () -> Unit) {
         confirmButton = { TextButton(onClick = { removeModelConfirm = false; controller.removeModel() }) { Text("Supprimer") } }, dismissButton = { TextButton(onClick = { removeModelConfirm = false }) { Text("Annuler") } })
     if (clearConfirm) AlertDialog(onDismissRequest = { clearConfirm = false }, title = { Text("Effacer la session ?") }, text = { Text("Cela supprime les messages en mémoire sur ce téléphone. Une requête déjà transmise au fournisseur ne peut pas être retirée.") },
         confirmButton = { TextButton(onClick = { controller.clearHistory(); clearConfirm = false }) { Text("Effacer") } }, dismissButton = { TextButton(onClick = { clearConfirm = false }) { Text("Annuler") } })
+}
+
+@Composable
+private fun DeviceActionsDialog(controller: CompanionController,onDismiss: () -> Unit) {
+    var appsTab by remember { mutableStateOf(false) }
+    var query by remember { mutableStateOf("") }
+    var command by remember { mutableStateOf("") }
+    AlertDialog(onDismissRequest=onDismiss,title={ Text("Actions Android") },text={
+        Column(verticalArrangement=Arrangement.spacedBy(8.dp)) {
+            Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                FilterChip(selected=!appsTab,onClick={ appsTab=false },label={ Text("Commandes") })
+                FilterChip(selected=appsTab,onClick={ appsTab=true },label={ Text("Applications") })
+            }
+            if(appsTab) {
+                OutlinedTextField(value=query,onValueChange={ query=it },label={ Text("Nom de l’application") },singleLine=true,modifier=Modifier.fillMaxWidth())
+                val apps=controller.availableApps.filter { DeviceActionPolicy.normalized(it.label).contains(DeviceActionPolicy.normalized(query)) }
+                if(apps.isEmpty()) Text("Aucune application visible correspondante. Les applis masquées ou du profil professionnel peuvent être absentes.",fontSize=12.sp)
+                LazyColumn(Modifier.heightIn(max=300.dp)) { items(apps,key={ it.packageName }) { app ->
+                    TextButton(onClick={ onDismiss(); controller.requestAction(DeviceAction.OpenApp(app)) },modifier=Modifier.fillMaxWidth()) { Text(app.label) }
+                } }
+            } else Column(Modifier.heightIn(max=400.dp).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+                Text("Dites ou écrivez une commande précise. Ces commandes fonctionnent sans télécharger le modèle IA.",fontSize=12.sp)
+                listOf("Ouvre appareil photo","Ouvre paramètres","Ouvre Wi-Fi","Volume à 40 %").forEach { sample ->
+                    OutlinedButton(onClick={ onDismiss(); controller.send(sample) },modifier=Modifier.fillMaxWidth()) { Text(sample,fontSize=12.sp) }
+                }
+                OutlinedTextField(value=command,onValueChange={ command=it.take(1200) },label={ Text("Votre commande") },placeholder={ Text("Alarme à 7h30") },modifier=Modifier.fillMaxWidth(),maxLines=4)
+                Button(onClick={ onDismiss(); controller.send(command) },enabled=command.isNotBlank(),modifier=Modifier.fillMaxWidth()) { Text("Demander l’action") }
+                Text("Exemples :\nMinuteur de 5 minutes\nAppelle +261340000000\nPrépare un SMS au +261340000000 : Bonjour\nItinéraire vers Antananarivo\nCherche météo Antananarivo\nAjoute un événement : Réunion équipe",fontSize=12.sp)
+                Text("Appels et SMS : validation dans leur application. Agenda : vous enregistrez le brouillon. Wi-Fi/Bluetooth : ouverture des réglages. Aucun contrôle automatique des boutons internes d’autres applications.",fontSize=11.sp)
+            }
+        }
+    },confirmButton={ TextButton(onClick=onDismiss) { Text("Fermer") } })
 }
 
 @Composable

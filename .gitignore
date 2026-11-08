@@ -32,3 +32,4 @@ node_modules/
 docs/verification/*.png
 !docs/verification/reference-reproduction.png
 !docs/verification/phone-response.png
+!docs/verification/bot-3d.png

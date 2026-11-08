@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.ange.mobile.DeviceActionPolicyTest" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-11-08T14:02:03" hostname="LUCAS" time="0.135">
+  <properties/>
+  <testcase name="statementsAboutCommandsAreNotExecuted" classname="com.ange.mobile.DeviceActionPolicyTest" time="0.04"/>
+  <testcase name="spokenFrenchDurationsAreRecognized" classname="com.ange.mobile.DeviceActionPolicyTest" time="0.037"/>
+  <testcase name="smsPreservesAccentsAndNeedsReview" classname="com.ange.mobile.DeviceActionPolicyTest" time="0.014"/>
+  <testcase name="alarmsAndTimersAreBounded" classname="com.ange.mobile.DeviceActionPolicyTest" time="0.007"/>
+  <testcase name="phoneNumbersAreNotGuessedFromContactNames" classname="com.ange.mobile.DeviceActionPolicyTest" time="0.004"/>
+  <testcase name="settingsAndCameraAreNativeActions" classname="com.ange.mobile.DeviceActionPolicyTest" time="0.005"/>
+  <testcase name="installedAppNamesAreExactAndAccentInsensitive" classname="com.ange.mobile.DeviceActionPolicyTest" time="0.007"/>
+  <testcase name="mapSearchAndCalendarAreStructured" classname="com.ange.mobile.DeviceActionPolicyTest" time="0.007"/>
+  <testcase name="onlyBrowserWebSchemesAreAllowed" classname="com.ange.mobile.DeviceActionPolicyTest" time="0.009"/>
+  <testcase name="volumeIsMediaOnlyAndBounded" classname="com.ange.mobile.DeviceActionPolicyTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

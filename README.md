@@ -4,7 +4,9 @@ ADVANCED NEURAL GUARDIAN ENGINE
 
 ANGE Companion ajoute une compagne animée et parlante au design `ANGE_2_0_Design_Fidele`, avec une application Android native et un service PC local/cloud. Le projet suit A.docx comme cahier des charges de l’écosystème. **Il ne réalise pas encore l’intégralité de cet assistant.**
 
-**Nouveau : IA directement sur le téléphone.** La version Android 2.0.1-phone propose le modèle libre Qwen3 0.6B INT4, téléchargé ou importé une fois (347 Mo). Les réponses sont ensuite calculées sur le CPU du téléphone, sans PC, Supabase, compte fournisseur ni API payante. Voir [le guide Galaxy A53 et les limites](docs/TELEPHONE_GRATUIT.md). Aucun téléchargement de modèle n’est lancé sans appui et confirmation.
+**Android 2.1 : bot 3D, voix et actions.** Un robot en vraie 3D locale s’ajoute au portrait illustré. Des commandes explicites permettent d’ouvrir les applications, de préparer appels/SMS/événements, de demander alarmes/minuteurs et de régler le volume multimédia. La discussion vocale peut enchaîner les tours tant qu’ANGE reste au premier plan. Voir [le guide bot 3D et commandes](docs/BOT_3D_ET_ACTIONS.md) et [les résultats précis](docs/ETAT_BOT_ACTIONS.md).
+
+**IA directement sur le téléphone.** Le modèle libre Qwen3 0.6B INT4 est téléchargé ou importé une fois (347 Mo). Les réponses sont ensuite calculées sur le CPU du téléphone, sans PC, Supabase, compte fournisseur ni API payante. Voir [le guide Galaxy A53](docs/TELEPHONE_GRATUIT.md). Aucun téléchargement de modèle n’est lancé sans appui et confirmation. Une mise à jour de l’APK conserve le modèle déjà installé.
 
 ## Compagne mobile
 
@@ -14,7 +16,7 @@ ANGE Companion ajoute une compagne animée et parlante au design `ANGE_2_0_Desig
 - Trois modes Android : **Simple** (heure/date/salutation, sans IA générative), **IA téléphone** (Qwen3 embarqué après installation du modèle), **PC local** (Ollama facultatif). Aucun mode cloud ni appel IA payant depuis cet APK ; une ancienne préférence cloud est remplacée par IA téléphone. Le connecteur cloud demeure dans la version web/PC et exige sa propre configuration et confirmation.
 - Jeton de connexion chiffré au repos avec Android Keystore ; clés du fournisseur cloud uniquement sur le PC.
 
-L’animation est une **animation 2D par poses**, pas un personnage 3D. La bouche suit approximativement les événements et la durée de la lecture vocale, sans correspondance phonème par phonème. La voix féminine, sa qualité et les langues disponibles dépendent du moteur Android installé. Le malgache n’est pas annoncé comme validé.
+Le choix **Bot 3D** affiche un robot procédural OpenGL avec articulations, éclairage, rotation au toucher et expressions. **Portrait 2D** conserve les huit poses de la compagne illustrée. Dans les deux cas, la bouche suit approximativement les événements de lecture, sans correspondance phonème par phonème. La voix et les langues disponibles dépendent du moteur Android installé. Le malgache n’est pas annoncé comme validé. Les commandes Android sont analysées séparément ; les réponses du modèle ne sont jamais exécutées.
 
 ## Essayer le personnage sur Windows
 
@@ -72,6 +74,6 @@ Les résultats exacts de compilation, tests et essais figurent dans `docs/ETAT_C
 
 ## Périmètre restant
 
-Le contrôle Windows/Android, l’agenda réel, la vision, les rappels système, Home Assistant, les notifications réelles, le réveil vocal continu, la mémoire chiffrée et la synchronisation complète ne sont pas implémentés. La page Mémoire héritée du design garde ses notes de session ; l’API SQLite est une nouvelle base distincte et ne constitue pas une synchronisation automatique avec cette page. Aucun code arbitraire ou commande système n’est exécuté par le modèle.
+Les actions Android 2.1 couvrent les intentions publiques des applications : lancement, numérotation, brouillons SMS/Agenda, demandes Horloge et réglage du volume multimédia. Le contrôle automatique des boutons internes d’autres applications, le contrôle Windows, la vision, les rappels propres à ANGE, Home Assistant, la lecture des notifications, le réveil vocal permanent, la mémoire chiffrée et la synchronisation complète restent à développer. La page Mémoire héritée du design garde ses notes de session ; l’API SQLite est une base distincte, sans synchronisation automatique. Aucun code arbitraire ou commande système n’est exécuté par le modèle.
 
 Le code Jarvis mentionné dans A.docx n’a pas été importé ni présenté comme audité ou réutilisé. Les fichiers synchronisés du cahier des charges et des références restent en lecture seule. Les illustrations ont été générées à partir des références fournies ; leurs prompts et leur provenance sont documentés dans `docs` et `assets/companion`.

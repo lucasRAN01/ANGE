@@ -1,0 +1,7 @@
+{
+  "settings_target": "com.android.settings/.homepage.SettingsHomepageActivity",
+  "launcher_target": "com.google.android.deskclock/com.android.deskclock.DeskClock",
+  "confirmed_alarm": "07:30, label ANGE, displayed in Clock",
+  "test_alarm_deleted": true,
+  "physical_phone_tested": false
+}

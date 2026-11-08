@@ -39,6 +39,12 @@ class CompanionController(context: Context) {
     private val executor = Executors.newSingleThreadExecutor()
     private val modelStore = OnDeviceModelStore(app)
     private val phoneRunner = OnDeviceRunner(app)
+    private val deviceActions = AndroidDeviceActions(context)
+    private val actionEngine = "Commandes Android"
+    var availableApps by mutableStateOf<List<LaunchableApp>>(emptyList()); private set
+    var pendingAction by mutableStateOf<DeviceAction?>(null); private set
+    var handsFree by mutableStateOf(false); private set
+    var avatar3D by mutableStateOf(prefs.getBoolean("avatar3D",true))
     private var pending: Future<*>? = null
     @Volatile private var connection: HttpURLConnection? = null
     private var generation = 0L
@@ -73,6 +79,7 @@ class CompanionController(context: Context) {
     val lines = mutableStateListOf<DialogueLine>()
 
     init {
+        refreshApps()
         tts = TextToSpeech(app) { code -> main.post {
             if (!closed) {
                 speechReady = code == TextToSpeech.SUCCESS
@@ -85,7 +92,11 @@ class CompanionController(context: Context) {
                 if (validUtterance(id)) { mood = CompanionMood.SPEAKING; status = "ANGE vous parle" }
             } }
             override fun onDone(id: String?) { main.post {
-                if (validUtterance(id)) { utteranceId = null; mood = CompanionMood.IDLE; status = "À votre écoute, sur demande." }
+                if (validUtterance(id)) {
+                    utteranceId = null; mood = CompanionMood.IDLE; status = "À votre écoute, sur demande."
+                    val turn=generation
+                    if(handsFree) main.postDelayed({ if(turn==generation && handsFree && foreground && !closed && pendingAction==null) startListening() },650)
+                }
             } }
             @Deprecated("Android callback") override fun onError(id: String?) { speechError(id) }
             override fun onError(id: String?, errorCode: Int) { speechError(id) }
@@ -100,12 +111,12 @@ class CompanionController(context: Context) {
 
     private fun validUtterance(id: String?) = !closed && foreground && id != null && id == utteranceId
     private fun speechError(id: String?) { main.post {
-        if (validUtterance(id)) { utteranceId = null; mood = CompanionMood.ERROR; status = "Lecture vocale interrompue par le moteur Android." }
+        if (validUtterance(id)) { handsFree=false; utteranceId = null; mood = CompanionMood.ERROR; status = "Lecture vocale interrompue par le moteur Android." }
     } }
 
     fun saveSettings() {
         prefs.edit().putString("mode", mode).putString("language", language).putString("server", serverUrl)
-            .putString("voice", selectedVoice).putBoolean("animations", animations).putBoolean("autoSpeak", autoSpeak).apply()
+            .putString("voice", selectedVoice).putBoolean("animations", animations).putBoolean("autoSpeak", autoSpeak).putBoolean("avatar3D",avatar3D).apply()
         try { SecureToken.write(app, accessToken.trim()) } catch (_: Exception) {
             status = "Jeton utilisable en mémoire, mais sauvegarde chiffrée indisponible."
         }
@@ -117,8 +128,14 @@ class CompanionController(context: Context) {
         if (mode !in setOf("offline", "ondevice", "local")) { fail("Cette version gratuite n’appelle aucune API IA payante."); return }
         stop(false)
         val requestId = generation
-        val history = lines.takeLast(20).map { JSONObject().put("role", it.role).put("content", it.content.take(4000)) }
-        lines.add(DialogueLine("user", clean, mode))
+        val command=DeviceActionPolicy.parse(clean,availableApps)
+        val history = lines.filter { it.engine!=actionEngine }.takeLast(20).map { JSONObject().put("role", it.role).put("content", it.content.take(4000)) }
+        lines.add(DialogueLine("user", clean,if(command==ActionParse.None) mode else actionEngine))
+        when(command) {
+            is ActionParse.Found -> { handsFree=false; dispatchAction(command.action); return }
+            is ActionParse.Problem -> { handsFree=false; complete(command.message,actionEngine); return }
+            ActionParse.None -> Unit
+        }
         if (mode == "offline") {
             complete(CompanionPolicy.offline(clean, language), "Mobile limité · sans IA générative")
             return
@@ -127,7 +144,7 @@ class CompanionController(context: Context) {
             if (!modelStore.ready()) { fail("Téléchargez ou importez d’abord le modèle dans Réglages → IA sur le téléphone."); return }
             mood = CompanionMood.THINKING
             status = "ANGE réfléchit sur le téléphone · première ouverture du modèle parfois lente"
-            val prompt = OnDevicePolicy.prompt(clean, lines.dropLast(1).map { it.role to it.content }, language)
+            val prompt = OnDevicePolicy.prompt(clean, lines.dropLast(1).filter { it.engine!=actionEngine }.map { it.role to it.content }, language)
             pending = executor.submit {
                 try {
                     val reply = phoneRunner.generate(modelStore.file, prompt)
@@ -163,7 +180,7 @@ class CompanionController(context: Context) {
         while (lines.size > 40) lines.removeAt(0)
         mood = CompanionMood.IDLE
         status = engine
-        if (autoSpeak) speak(reply)
+        if (autoSpeak || handsFree) speak(reply)
     }
 
     fun greet() {
@@ -242,6 +259,10 @@ class CompanionController(context: Context) {
     }
 
     fun permissionDenied() { fail("Le microphone est refusé. Vous pouvez continuer par écrit.") }
+    fun enableHandsFree(): Boolean {
+        if(!speechReady) { fail("Activez une voix Android avant la discussion vocale."); return false }
+        handsFree=true; return true
+    }
     private fun cancelRecognition() {
         recognitionId = null
         recognition?.cancel(); recognition?.destroy(); recognition = null
@@ -249,6 +270,8 @@ class CompanionController(context: Context) {
     }
     fun stop(announce: Boolean = true) {
         generation++
+        pendingAction=null
+        if(announce) handsFree=false
         if (modelBusy) modelStatus = "Transfert arrêté. Vous pouvez recommencer ou importer le fichier."
         phoneRunner.cancel(); modelStore.cancel(); modelBusy = false
         pending?.cancel(true); pending = null
@@ -262,10 +285,43 @@ class CompanionController(context: Context) {
         if (announce) status = "Interaction arrêtée."
     }
     fun clearHistory() { stop(); lines.clear(); lastReply = "" }
-    fun onBackground() { foreground = false; active = false; stop(false); executor.execute { phoneRunner.unload() }; status = "En pause. Aucun microphone en arrière-plan." }
-    fun onForeground() { foreground = true; active = true }
+    fun onBackground() { foreground = false; active = false; handsFree=false; stop(false); executor.execute { phoneRunner.unload() }; status = "En pause. Aucun microphone en arrière-plan." }
+    fun onForeground() {
+        val returning=!foreground
+        foreground = true; active = true
+        if(returning) status="Prête. Appuyez sur Parler ou écrivez votre demande."
+    }
     fun close() { closed = true; stop(false); tts?.shutdown(); tts = null; executor.execute { phoneRunner.unload() }; executor.shutdown() }
-    private fun fail(message: String) { mood = CompanionMood.ERROR; status = message }
+    private fun fail(message: String) { handsFree=false; mood = CompanionMood.ERROR; status = message }
+
+    fun refreshApps() { executor.execute {
+        val apps=runCatching { deviceActions.apps() }.getOrDefault(emptyList())
+        main.post { if(!closed) availableApps=apps }
+    } }
+    fun requestAction(action: DeviceAction) {
+        if(closed || !foreground) return
+        stop(false); handsFree=false
+        lines.add(DialogueLine("user",action.title,actionEngine))
+        dispatchAction(action)
+    }
+    private fun dispatchAction(action: DeviceAction) {
+        if(action.confirmation) { pendingAction=action; status="Vérifiez la demande avant de continuer."; mood=CompanionMood.IDLE }
+        else executeAction(action)
+    }
+    fun confirmAction() {
+        val action=pendingAction ?: return
+        pendingAction=null
+        if(!closed && foreground) executeAction(action)
+    }
+    fun cancelAction() { pendingAction=null; status="Action annulée." }
+    fun rendererFailed(message: String) {
+        if(closed) return
+        avatar3D=false; saveSettings(); status="Affichage 3D indisponible : ${message.take(120)}. Portrait 2D activé."
+    }
+    private fun executeAction(action: DeviceAction) {
+        try { complete(deviceActions.execute(action),actionEngine) }
+        catch(error: Exception) { fail(error.message ?: "Android a refusé cette action.") }
+    }
 
     fun downloadModel() = prepareModel(null)
     fun importModel(uri: Uri) = prepareModel(uri)
