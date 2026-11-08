@@ -1,0 +1,16 @@
+{
+  "date": "2026-11-08",
+  "device": "Dedicated API 35 x86_64 emulator",
+  "airplane_mode": true,
+  "home_navigation_verified": true,
+  "home_activity": "com.google.android.apps.nexuslauncher/.NexusLauncherActivity",
+  "floating_service_verified": true,
+  "drag_left_right_and_greeting_verified_in_video": true,
+  "close_button_stopped_service": true,
+  "video_seconds": 11.929944,
+  "video_width": 1080,
+  "video_height": 1920,
+  "actual_calls_made": false,
+  "real_gemini_requests": false,
+  "physical_galaxy_a53_tested": false
+}

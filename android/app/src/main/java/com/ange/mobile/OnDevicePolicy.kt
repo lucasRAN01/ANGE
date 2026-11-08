@@ -9,7 +9,7 @@ object OnDevicePolicy {
     const val MODEL_URL = "https://huggingface.co/litert-community/Qwen3-0.6B-int4/resolve/56621f0115eba5781051ef9714c06e16e6d40c0b/qwen3_0.6b_nothink_q4_block32_ekv1280.litertlm"
     const val MODEL_PAGE = "https://huggingface.co/litert-community/Qwen3-0.6B-int4"
 
-    fun safeMode(saved: String?): String = if (saved in setOf("offline", "ondevice", "local")) saved!! else "ondevice"
+    fun safeMode(saved: String?): String = if (saved in setOf("offline", "ondevice", "local", "online")) saved!! else "ondevice"
     fun validateModel(size: Long, sha256: String) {
         require(size == MODEL_BYTES && sha256.equals(MODEL_SHA256, ignoreCase = true)) {
             "Le fichier n’est pas le modèle compatible attendu, ou le téléchargement est incomplet."

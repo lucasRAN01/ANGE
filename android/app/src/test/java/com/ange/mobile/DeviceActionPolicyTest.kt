@@ -17,9 +17,10 @@ class DeviceActionPolicyTest {
             assertEquals(ActionParse.None,DeviceActionPolicy.parse(text,apps))
     }
     @Test fun phoneNumbersAreNotGuessedFromContactNames() {
-        val dial=action("Appelle +261 34 000 0000") as DeviceAction.Dial
+        val dial=action("Appelle +261 34 000 0000") as DeviceAction.CallNumber
         assertEquals("+261340000000",dial.number); assertTrue(dial.confirmation)
-        assertTrue(DeviceActionPolicy.parse("Appelle Maman",apps) is ActionParse.Problem)
+        assertEquals(DeviceAction.CallContact("maman"),action("Appelle Maman"))
+        assertTrue(action("Compose +261340000000") is DeviceAction.Dial)
         assertTrue(DeviceActionPolicy.parse("Appelle +123;rm -rf",apps) is ActionParse.Problem)
     }
     @Test fun smsPreservesAccentsAndNeedsReview() {

@@ -31,7 +31,9 @@ import java.util.concurrent.Future
 enum class CompanionMood { IDLE, LISTENING, THINKING, SPEAKING, ERROR }
 data class DialogueLine(val role: String, val content: String, val engine: String)
 
-class CompanionController(context: Context) {
+class CompanionController internal constructor(context: Context,
+    private val onlineGenerate: (String,JSONObject,(HttpURLConnection?) -> Unit) -> String = OnlineConversation::generate,
+    private val lookupContacts: (Context,String) -> List<ContactNumber> = ContactDirectory::find) {
     private val app = context.applicationContext
     private val prefs = app.getSharedPreferences("ange-companion", Context.MODE_PRIVATE)
     private val main = Handler(Looper.getMainLooper())
@@ -40,7 +42,16 @@ class CompanionController(context: Context) {
     private val phoneRunner = OnDeviceRunner(app)
     private val deviceActions = AndroidDeviceActions(context)
     private val actionEngine = "Commandes Android"
+    private val factsEngine = "Téléphone · données système"
     private val jarvisMemory=JarvisMemoryStore(app)
+    private val routineStore=RoutineStore(app)
+    var routines by mutableStateOf(runCatching { routineStore.all() }.getOrDefault(emptyList())); private set
+    var routineStatus by mutableStateOf(""); private set
+    var lastActionCommand by mutableStateOf(""); private set
+    private var actionInstruction = ""
+    var permissionAction by mutableStateOf<DeviceAction?>(null); private set
+    var contactChoices by mutableStateOf<List<ContactNumber>>(emptyList()); private set
+    var avatarStyle by mutableStateOf(prefs.getString("avatarStyle", "photo") ?: "photo")
     var memoryEntries by mutableStateOf<List<JarvisMemoryEntry>>(emptyList()); private set
     var memoryStatus by mutableStateOf("Chargement de la mémoire locale…"); private set
     var privateVoice by mutableStateOf(prefs.getBoolean("privateVoice",true))
@@ -74,6 +85,8 @@ class CompanionController(context: Context) {
     var language by mutableStateOf(prefs.getString("language", "fr") ?: "fr")
     var serverUrl by mutableStateOf(prefs.getString("server", "") ?: "")
     var accessToken by mutableStateOf(SecureToken.read(app))
+    var onlineKey by mutableStateOf(SecureToken.read(app,"gemini"))
+    var onlineConsent by mutableStateOf(false)
     var selectedVoice by mutableStateOf(prefs.getString("voice", "") ?: "")
     var animations by mutableStateOf(prefs.getBoolean("animations", true))
     var autoSpeak by mutableStateOf(prefs.getBoolean("autoSpeak", true))
@@ -120,35 +133,58 @@ class CompanionController(context: Context) {
 
     fun saveSettings() {
         prefs.edit().putString("mode", mode).putString("language", language).putString("server", serverUrl)
-            .putString("voice", selectedVoice).putBoolean("animations", animations).putBoolean("autoSpeak", autoSpeak).putBoolean("avatar3D",avatar3D).putBoolean("privateVoice",privateVoice).apply()
-        try { SecureToken.write(app, accessToken.trim()) } catch (_: Exception) {
-            status = "Jeton utilisable en mémoire, mais sauvegarde chiffrée indisponible."
+            .putString("voice", selectedVoice).putBoolean("animations", animations).putBoolean("autoSpeak", autoSpeak).putBoolean("avatar3D",avatar3D).putBoolean("privateVoice",privateVoice).putString("avatarStyle",avatarStyle).apply()
+        try { SecureToken.write(app, accessToken.trim()); SecureToken.write(app,onlineKey.trim(),"gemini") } catch (_: Exception) {
+            status = "Clés utilisables en mémoire, mais sauvegarde chiffrée indisponible."
         }
     }
 
     fun send(text: String) {
         val clean = text.trim().take(4000)
         if (clean.isEmpty() || closed || !foreground) return
-        if (mode !in setOf("offline", "ondevice", "local")) { fail("Cette version gratuite n’appelle aucune API IA payante."); return }
+        val confirmation=ContactDirectory.normalizedName(clean)
+        if(pendingAction!=null && confirmation in setOf("annule","annuler","non annule")) { cancelAction(); return }
+        if(pendingAction is DeviceAction.CallNumber && confirmation in setOf("confirme l appel","confirme cet appel","appelle maintenant")) { confirmAction(); return }
+        if (mode !in setOf("offline", "ondevice", "local", "online")) { fail("Choisissez un mode disponible dans Réglages."); return }
         stop(false)
         val requestId = generation
-        val command=DeviceActionPolicy.parse(clean,availableApps)
-        val history = lines.filter { it.engine!=actionEngine }.takeLast(20).map { JSONObject().put("role", it.role).put("content", it.content.take(4000)) }
-        lines.add(DialogueLine("user", clean,if(command==ActionParse.None) mode else actionEngine))
+        val expanded = try { routineStore.resolve(clean) ?: clean } catch (_: Exception) { fail("Raccourcis locaux illisibles. Vérifiez l’onglet Actions."); return }
+        val command=DeviceActionPolicy.parse(expanded,availableApps)
+        actionInstruction = expanded
+        val fact = if (command == ActionParse.None) PhoneFacts.parse(clean) else null
+        val history = conversationHistory().takeLast(20).map { JSONObject().put("role", it.role).put("content", it.content.take(4000)) }
+        lines.add(DialogueLine("user", clean, when { command != ActionParse.None -> actionEngine; fact != null -> factsEngine; else -> mode }))
         when(command) {
             is ActionParse.Found -> { handsFree=false; dispatchAction(command.action); return }
             is ActionParse.Problem -> { handsFree=false; complete(command.message,actionEngine); return }
             ActionParse.None -> Unit
         }
+        if (fact != null) {
+            complete(PhoneFacts.reply(fact, AndroidPhoneFacts.read(app), language), factsEngine)
+            return
+        }
         if (mode == "offline") {
             complete(CompanionPolicy.offline(clean, language), "Mobile limité · sans IA générative")
+            return
+        }
+        if (mode == "online") {
+            if(!onlineConsent || onlineKey.isBlank()) { fail("Dans Réglages, configurez une clé Google AI Studio d’un projet sans facturation et autorisez les conversations en ligne pour cette session."); return }
+            mood=CompanionMood.THINKING; status="Discussion en ligne · Google Gemini"
+            val payload=OnlineConversation.payload(clean, conversationHistory().dropLast(1).map { it.role to it.content }, language)
+            val key=onlineKey
+            pending=executor.submit {
+                try {
+                    val reply=onlineGenerate(key,payload) { connection=it }
+                    main.post { if(requestId==generation && foreground && !closed) complete(reply,"En ligne · Gemini 3.1 Flash-Lite") }
+                } catch(error: Exception) { main.post { if(requestId==generation && foreground && !closed) fail(error.message ?: "Conversation indisponible.") } }
+            }
             return
         }
         if (mode == "ondevice") {
             if (!modelStore.ready()) { fail("Téléchargez ou importez d’abord le modèle dans Réglages → IA sur le téléphone."); return }
             mood = CompanionMood.THINKING
             status = "ANGE réfléchit sur le téléphone · première ouverture du modèle parfois lente"
-            val prompt = OnDevicePolicy.prompt(clean, lines.dropLast(1).filter { it.engine!=actionEngine }.map { it.role to it.content }, language)
+            val prompt = OnDevicePolicy.prompt(clean, conversationHistory().dropLast(1).map { it.role to it.content }, language)
             pending = executor.submit {
                 try {
                     val reply = phoneRunner.generate(modelStore.file, prompt)
@@ -177,6 +213,9 @@ class CompanionController(context: Context) {
             }
         }
     }
+
+    // Device facts become stale. Keep them visible, but never present old values to the model.
+    private fun conversationHistory() = lines.filter { it.engine != actionEngine && it.engine != factsEngine }
 
     private fun complete(reply: String, engine: String) {
         val clean=JarvisVoice.clean(reply).ifBlank { reply }
@@ -215,12 +254,14 @@ class CompanionController(context: Context) {
         if (code == TextToSpeech.ERROR) { utteranceId = null; fail("La voix Android a refusé la lecture.") }
     }
 
-    fun startListening() {
+    fun startListening(keepCallConfirmation: Boolean = false) {
         if (closed || !foreground) return
         if (app.checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             fail("Autorisation microphone requise."); return
         }
+        val call=if(keepCallConfirmation) pendingAction as? DeviceAction.CallNumber else null
         stop(false)
+        if(call!=null) pendingAction=call
         val localAvailable = Build.VERSION.SDK_INT >= 31 && SpeechRecognizer.isOnDeviceRecognitionAvailable(app)
         val route = SpeechInputPolicy.initialRoute(localAvailable, allowNetworkRecognition)
         if (route == SpeechInputPolicy.Route.UNAVAILABLE) {
@@ -290,6 +331,7 @@ class CompanionController(context: Context) {
     }
     fun stop(announce: Boolean = true) {
         generation++
+        contactChoices=emptyList(); permissionAction=null
         pendingAction=null
         if(announce) handsFree=false
         if (modelBusy) modelStatus = "Transfert arrêté. Vous pouvez recommencer ou importer le fichier."
@@ -321,13 +363,65 @@ class CompanionController(context: Context) {
     fun requestAction(action: DeviceAction) {
         if(closed || !foreground) return
         stop(false); handsFree=false
+        actionInstruction=when(action) {
+            is DeviceAction.CallContact -> "Appelle ${action.name}"
+            is DeviceAction.CallNumber -> "Appelle ${action.label}"
+            is DeviceAction.OpenApp -> "Ouvre ${action.app.label}"
+            is DeviceAction.Volume -> "Volume à ${action.percent} %"
+            DeviceAction.Camera -> "Ouvre appareil photo"
+            else -> ""
+        }
         lines.add(DialogueLine("user",action.title,actionEngine))
         dispatchAction(action)
     }
     private fun dispatchAction(action: DeviceAction) {
+        if (missingPermissions(action).isNotEmpty()) { permissionAction=action; status="Autorisation Android nécessaire pour cette action."; mood=CompanionMood.IDLE; return }
+        if (action is DeviceAction.CallContact) { findContact(action.name); return }
         if(action.confirmation) { pendingAction=action; status="Vérifiez la demande avant de continuer."; mood=CompanionMood.IDLE }
         else executeAction(action)
     }
+    fun missingPermissions(action: DeviceAction): List<String> = when(action) {
+        is DeviceAction.CallContact -> listOf(Manifest.permission.READ_CONTACTS)
+        is DeviceAction.CallNumber -> listOf(Manifest.permission.CALL_PHONE)
+        else -> emptyList()
+    }.filter { app.checkSelfPermission(it) != PackageManager.PERMISSION_GRANTED }
+    fun resumePermissionAction(saved: DeviceAction? = permissionAction) {
+        val action=saved ?: return
+        permissionAction=null
+        if(missingPermissions(action).isNotEmpty()) { fail("Autorisation refusée. Aucun appel n’a été lancé."); return }
+        if(foreground && !closed) dispatchAction(action)
+    }
+    private fun findContact(name: String) {
+        val turn=generation
+        mood=CompanionMood.THINKING; status="Recherche locale du contact…"
+        pending=executor.submit {
+            try {
+                val matches=lookupContacts(app,name)
+                main.post { if(turn==generation && foreground && !closed) {
+                    mood=CompanionMood.IDLE
+                    when(matches.size) {
+                        0 -> complete("Aucun numéro trouvé pour « $name » dans vos contacts. Vérifiez son nom exact.",actionEngine)
+                        1 -> dispatchAction(DeviceAction.CallNumber(matches[0].number,matches[0].name))
+                        else -> { contactChoices=matches; status="Choisissez le contact et le numéro à appeler." }
+                    }
+                } }
+            } catch (_: Exception) { main.post { if(turn==generation && !closed) fail("Impossible de lire les contacts. Vérifiez l’autorisation Contacts.") } }
+        }
+    }
+    fun chooseContact(contact: ContactNumber) {
+        if(contact !in contactChoices) return
+        contactChoices=emptyList(); dispatchAction(DeviceAction.CallNumber(contact.number,contact.name))
+    }
+    fun cancelContactChoice() { contactChoices=emptyList(); status="Appel annulé." }
+    internal fun acceptContactChoices(contacts: List<ContactNumber>) { contactChoices=contacts; status="Choisissez le numéro à appeler." }
+    fun teachRoutine(phrase: String, command: String) {
+        try {
+            require(PhoneFacts.parse(phrase)==null && DeviceActionPolicy.parse(phrase,availableApps)==ActionParse.None) { "Cette phrase est déjà une commande intégrée." }
+            require(DeviceActionPolicy.parse(command,availableApps) is ActionParse.Found) { "Choisissez une commande Android prise en charge, pas une réponse du modèle." }
+            routineStore.save(phrase,command); routines=routineStore.all(); routineStatus="Raccourci appris localement. Les confirmations des appels restent actives."
+        } catch(error: Exception) { routineStatus=error.message ?: "Raccourci non enregistré." }
+    }
+    fun removeRoutine(phrase: String) { runCatching { routineStore.remove(phrase); routines=routineStore.all() }.onFailure { routineStatus="Suppression impossible." } }
     fun confirmAction() {
         val action=pendingAction ?: return
         pendingAction=null
@@ -356,7 +450,7 @@ class CompanionController(context: Context) {
         }
     }
     private fun executeAction(action: DeviceAction) {
-        try { complete(deviceActions.execute(action),actionEngine) }
+        try { complete(deviceActions.execute(action),actionEngine); lastActionCommand=actionInstruction }
         catch(error: Exception) { fail(error.message ?: "Android a refusé cette action.") }
     }
 

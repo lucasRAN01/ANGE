@@ -1,0 +1,9 @@
+Built-in image_gen, style-transfer, reference: photo supplied by the user.
+Create a production animation sprite atlas for a floating Android companion based on the woman in the reference photo. Preserve recognizable face, warm brown skin, black curly shoulder-length hair with tendrils, gold hoop earrings, and the elegant white floral dress with puff sleeves. Turn her into a polished charming miniature 3D-rendered stylized adult character, large expressive head (adult, not child), soft realistic materials, tiny cyan holographic bracelet. Full body visible in EVERY cell, no cutoffs. Do not reproduce the room or background. Layout EXACTLY 4 columns by 3 rows equal size grid, entire image 2048 by 2048 pixels, transparent background true alpha, no visible grid, no labels, no text. Each cell has ONE same character at the exact same scale, centered horizontally and baseline at 95% of cell height, with enough clear padding to avoid neighbouring cells. Keep the dress slightly shorter at ankle length so feet and walking can be seen, preserving floral material.
+Row1 cells: 1 neutral smiling idle mouth closed front; 2 same pose eyes gently closed blink; 3 speaking mouth slightly open front; 4 speaking mouth round O front.
+Row2 cells: 5 hand lifted to ear listening; 6 thoughtful hand to chin; 7 friendly right-hand wave raised; 8 delighted both hands welcoming.
+Row3 cells: 9 walking left profile left foot forward; 10 walking left profile right foot forward; 11 walking right profile left foot forward; 12 walking right profile right foot forward.
+Highly consistent identity, same face and same clothing throughout. No floor shadows spilling cells. This is an actual game-style animation asset, not an interface mockup.
+
+Requested resolution: 2048x2048. Actual returned resolution: 1254x1254; renderer uses actual dimensions. No upscaling claim.
+Saved project asset: android/app/src/main/res/drawable-nodpi/ange_photo_atlas.png

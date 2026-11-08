@@ -20,16 +20,16 @@ object SecureToken {
                 .setBlockModes(KeyProperties.BLOCK_MODE_GCM).setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE).build())
         }.generateKey()
     }
-    fun write(context: Context, token: String) {
+    fun write(context: Context, token: String, slot: String = "token") {
         val prefs = context.getSharedPreferences("ange-secrets", Context.MODE_PRIVATE)
-        if (token.isBlank()) { prefs.edit().remove("token").apply(); return }
+        if (token.isBlank()) { prefs.edit().remove(slot).apply(); return }
         val cipher = Cipher.getInstance("AES/GCM/NoPadding")
         cipher.init(Cipher.ENCRYPT_MODE, key())
         val bytes = cipher.iv + cipher.doFinal(token.toByteArray(Charsets.UTF_8))
-        prefs.edit().putString("token", Base64.encodeToString(bytes, Base64.NO_WRAP)).apply()
+        prefs.edit().putString(slot, Base64.encodeToString(bytes, Base64.NO_WRAP)).apply()
     }
-    fun read(context: Context): String = try {
-        val encoded = context.getSharedPreferences("ange-secrets", Context.MODE_PRIVATE).getString("token", null)
+    fun read(context: Context, slot: String = "token"): String = try {
+        val encoded = context.getSharedPreferences("ange-secrets", Context.MODE_PRIVATE).getString(slot, null)
         if (encoded == null) "" else {
             val bytes = Base64.decode(encoded, Base64.NO_WRAP)
             val cipher = Cipher.getInstance("AES/GCM/NoPadding")

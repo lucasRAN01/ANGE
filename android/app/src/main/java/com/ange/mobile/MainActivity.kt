@@ -43,18 +43,30 @@ private val Ice = Color(0xFF8BEAFF)
 private val Labels = listOf("Démarrage", "Accueil", "Mobile", "Voix", "Chat IA", "Cerveau IA", "Mémoire", "Appareils", "Contrôles", "Paramètres", "Compagne")
 class MainActivity : ComponentActivity() {
     private lateinit var companion: CompanionController
+    private var voiceRequest by mutableIntStateOf(0)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         companion = CompanionController(this)
-        setContent { AngeApp(companion) }
+        setContent { SimpleAngeApp(companion,voiceRequest) }
     }
-    override fun onStart() { super.onStart(); if (::companion.isInitialized) companion.onForeground() }
-    override fun onStop() { if (::companion.isInitialized) companion.onBackground(); super.onStop() }
+    override fun onStart() { super.onStart(); visible=true; if (::companion.isInitialized) { companion.onForeground(); FloatingCompanionService.pauseConversation(); consumeHandoff() } }
+    override fun onStop() { visible=false; if (::companion.isInitialized) companion.onBackground(); super.onStop() }
+    override fun onNewIntent(intent: android.content.Intent) { super.onNewIntent(intent); consumeHandoff() }
+    private fun consumeHandoff() {
+        val action=CompanionHandoff.action; val contacts=CompanionHandoff.contacts; val voice=CompanionHandoff.startVoice
+        CompanionHandoff.clear()
+        if(action!=null) companion.requestAction(action) else if(contacts.isNotEmpty()) companion.acceptContactChoices(contacts)
+        if(voice) voiceRequest++
+    }
     override fun onDestroy() { if (::companion.isInitialized) companion.close(); super.onDestroy() }
+    companion object { var visible=false; private set }
 }
 @Composable
 fun NativeIcon(name: String, modifier: Modifier = Modifier) {
     val asset = when(name) {
+        "call" -> R.drawable.ui_call
+        "camera" -> R.drawable.ui_camera
+        "battery" -> R.drawable.ui_battery
         "home" -> R.drawable.ui_home
         "chat" -> R.drawable.ui_chat
         "memory" -> R.drawable.ui_memory

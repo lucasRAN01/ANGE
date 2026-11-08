@@ -1,5 +1,7 @@
 # ANGE sur Galaxy A53 5G — sans PC ni API payante
 
+**Guide historique de l’installation locale.** Les fonctions actuelles et leurs limites sont décrites dans [ANGE 2.3](ANGE_23_GUIDE.md). L’heure/date/batterie et les commandes Android y fonctionnent aussi en mode IA téléphone ; appels par contacts, navigation facultative et mini-compagne flottante ont été ajoutés. Le mode local reste sans API ; le nouveau mode en ligne est une option séparée nécessitant son propre consentement.
+
 Ce guide décrit l’installation du modèle introduite en 2.0.1-phone. La version **2.1.0-bot-actions** conserve cette installation et ajoute le [bot 3D et les commandes Android](BOT_3D_ET_ACTIONS.md) ; ses nouvelles fonctions et limites remplacent les anciennes mentions d’absence totale de contrôle Android dans ce document.
 
 Cette variante vise le Samsung SM-A536B/DS, 8 Go de RAM. Un petit modèle local est intégré au fonctionnement de l’application, mais son fichier est installé séparément. La vitesse et la chauffe doivent être mesurées sur le vrai téléphone : l’émulateur ne les prédit pas.

@@ -8,6 +8,9 @@ data class LaunchableApp(val packageName: String, val label: String)
 sealed class DeviceAction(val title: String, val detail: String, val confirmation: Boolean = false) {
     data class OpenApp(val app: LaunchableApp) : DeviceAction("Ouvrir ${app.label}", app.packageName)
     data class Dial(val number: String) : DeviceAction("Préparer un appel", "Numéro : $number. Vous appuyez ensuite sur Appeler dans Téléphone.", true)
+    data class CallContact(val name: String) : DeviceAction("Chercher $name", "Recherche locale dans vos contacts.")
+    data class CallNumber(val number: String, val label: String = number) : DeviceAction("Appeler $label", "Appel téléphonique vers $label\n$number\nL’appel sera lancé après votre confirmation.", true)
+    data class Navigate(val direction: String) : DeviceAction("Naviguer : $direction", "Navigation Android autorisée dans les réglages d’accessibilité.")
     data class Sms(val number: String, val body: String) : DeviceAction("Préparer un SMS", "À : $number\n\n$body\n\nANGE ouvre le brouillon ; vous seul appuyez sur Envoyer.", true)
     data class Map(val query: String) : DeviceAction("Afficher un lieu", query)
     data class Search(val query: String) : DeviceAction("Rechercher sur le Web", query)
@@ -31,9 +34,13 @@ object DeviceActionPolicy {
     fun normalized(value: String): String = JarvisVoice.withoutAccents(value).trim().replace(Regex("\\s+"), " ")
     fun parse(input: String, apps: List<LaunchableApp>): ActionParse {
         val original = input.trim().replace(Regex("^(?:hey\\s+)?ange[, :]+",RegexOption.IGNORE_CASE), "")
+            .replace(Regex("^(?:peux[- ]tu|pourrais[- ]tu|pouvez[- ]vous|pourriez[- ]vous|tu peux|est[- ]ce que tu peux)\\s+",RegexOption.IGNORE_CASE), "")
         val text = normalized(original).trimEnd('.', '!', '?').trim()
         fun found(action: DeviceAction) = ActionParse.Found(action)
         fun problem(message: String) = ActionParse.Problem(message)
+        val navigation = mapOf("retour" to "retour", "reviens en arriere" to "retour", "va a l accueil" to "accueil", "ecran d accueil" to "accueil", "applications recentes" to "récentes", "descends" to "descendre", "fais defiler vers le bas" to "descendre", "monte" to "monter", "fais defiler vers le haut" to "monter")
+        val navigationText=text.replace('’',' ').replace('\'',' ').replace(Regex("\\s+")," ")
+        navigation[navigationText]?.let { return found(DeviceAction.Navigate(it)) }
         Regex("^(?:prepare|prépare|envoie|envoyer|ecris|écris)\\s+(?:un\\s+)?(?:sms|message)\\s+(?:a|à|au)\\s+([+\\d][\\d ()+.-]{2,24}?)\\s*:\\s*(.+)$",setOf(RegexOption.IGNORE_CASE,RegexOption.DOT_MATCHES_ALL)).matchEntire(original)?.let {
             val number = number(it.groupValues[1]) ?: return problem("Indiquez un numéro de téléphone valide, sans nom de contact.")
             return found(DeviceAction.Sms(number,it.groupValues[2].take(1000)))
@@ -41,8 +48,10 @@ object DeviceActionPolicy {
         if (Regex("^(?:prepare|envoie|envoyer|ecris) (?:un )?(?:sms|message)\\b").containsMatchIn(text))
             return problem("Exemple : Prépare un SMS au +261340000000 : Bonjour. Aucun SMS n’est envoyé automatiquement.")
         Regex("^(?:appelle|appeler|compose|call) (.+)$").matchEntire(text)?.let {
-            return number(it.groupValues[1])?.let { n -> found(DeviceAction.Dial(n)) }
-                ?: problem("Donnez le numéro, par exemple : Appelle +261340000000. Les contacts par nom ne sont pas lus par ANGE.")
+            val target = it.groupValues[1]
+            number(target)?.let { n -> return found(if (text.startsWith("compose ")) DeviceAction.Dial(n) else DeviceAction.CallNumber(n)) }
+            if (target.length in 1..100 && Regex("^[\\p{L}][\\p{L} .'-]*$").matches(target)) return found(DeviceAction.CallContact(target))
+            return problem("Indiquez un nom de contact ou un numéro valide. Aucun numéro n’est deviné.")
         }
         Regex("^(?:mets? |regle |regler )?(?:le )?volume(?: multimedia)?(?: a)? (.+?)(?:\\s*%| pour cent)?$").matchEntire(text)?.let {
             val percent=spokenNumber(it.groupValues[1])

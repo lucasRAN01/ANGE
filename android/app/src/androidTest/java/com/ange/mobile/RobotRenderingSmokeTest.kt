@@ -18,6 +18,10 @@ class RobotRenderingSmokeTest {
         return null
     }
     @Test fun nativeSceneRendersRotatesAndPausesWithActivity() {
+        val prefs=androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().targetContext.getSharedPreferences("ange-companion",android.content.Context.MODE_PRIVATE)
+        val previous=prefs.getString("avatarStyle","photo")
+        prefs.edit().putString("avatarStyle","robot").commit()
+        try {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             val reference=AtomicReference<RobotSurface>()
             for(attempt in 0..30) {
@@ -41,5 +45,6 @@ class RobotRenderingSmokeTest {
             Thread.sleep(400)
             assertTrue("GL must resume with foreground",renderer.renderedFrames>paused)
         }
+        } finally { prefs.edit().putString("avatarStyle",previous).commit() }
     }
 }
