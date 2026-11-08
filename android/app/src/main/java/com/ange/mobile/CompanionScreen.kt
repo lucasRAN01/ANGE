@@ -185,8 +185,13 @@ fun CompanionScreen(controller: CompanionController, onMicrophone: () -> Unit) {
             }
             OutlinedButton(onClick = { controller.greet() }) { Text("Tester la salutation et la voix") }
             TextButton(onClick = { try { localContext.startActivity(Intent("com.android.settings.TTS_SETTINGS")) } catch (_: Exception) { localContext.startActivity(Intent(Settings.ACTION_SETTINGS)) } }) { Text("Réglages vocaux du téléphone") }
-            SettingToggle("Reconnaissance vocale réseau autorisée", controller.allowNetworkRecognition) { controller.allowNetworkRecognition = it }
-            Text("Si la reconnaissance locale est indisponible, le service vocal Android peut envoyer votre audio à son fournisseur. Aucune écoute continue ni en arrière-plan.", fontSize = 11.sp)
+            SettingToggle("Reconnaissance vocale réseau autorisée", controller.allowNetworkRecognition) { controller.setNetworkRecognitionAllowed(it) }
+            Text("Autorisation pour cette session. Si le moteur local est absent ou refuse la langue (codes 12/13), ANGE essaie une fois le service vocal Android. Celui-ci peut envoyer votre audio à son fournisseur. Aucune écoute en arrière-plan. Le choix du modèle IA ne change pas.", fontSize = 11.sp)
+            TextButton(onClick = {
+                controller.stop()
+                try { localContext.startActivity(SpeechInputIntents.settings()) }
+                catch (_: Exception) { localContext.startActivity(Intent(Settings.ACTION_SETTINGS)) }
+            }) { Text("Réglages de reconnaissance du téléphone") }
             if (controller.mode == "local") {
             Text("Connexion facultative au PC", color = cyan, fontSize = 18.sp)
             OutlinedTextField(value = controller.serverUrl, onValueChange = { controller.serverUrl = it.take(300) }, label = { Text("https://nom-du-pc:8765") }, modifier = Modifier.fillMaxWidth(), singleLine = true)

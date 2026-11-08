@@ -10,7 +10,6 @@ import android.os.Handler
 import android.os.Looper
 import android.net.Uri
 import android.speech.RecognitionListener
-import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
@@ -78,7 +77,7 @@ class CompanionController(context: Context) {
     var selectedVoice by mutableStateOf(prefs.getString("voice", "") ?: "")
     var animations by mutableStateOf(prefs.getBoolean("animations", true))
     var autoSpeak by mutableStateOf(prefs.getBoolean("autoSpeak", true))
-    var allowNetworkRecognition by mutableStateOf(false)
+    var allowNetworkRecognition by mutableStateOf(false); private set
     var allowNetworkVoice by mutableStateOf(false)
     val lines = mutableStateListOf<DialogueLine>()
 
@@ -222,10 +221,24 @@ class CompanionController(context: Context) {
             fail("Autorisation microphone requise."); return
         }
         stop(false)
-        val local = Build.VERSION.SDK_INT >= 31 && SpeechRecognizer.isOnDeviceRecognitionAvailable(app)
-        if (!local && !allowNetworkRecognition) {
+        val localAvailable = Build.VERSION.SDK_INT >= 31 && SpeechRecognizer.isOnDeviceRecognitionAvailable(app)
+        val route = SpeechInputPolicy.initialRoute(localAvailable, allowNetworkRecognition)
+        if (route == SpeechInputPolicy.Route.UNAVAILABLE) {
             fail("Reconnaissance locale indisponible. La saisie texte fonctionne ; la reconnaissance réseau reste désactivée."); return
         }
+        startRecognition(route == SpeechInputPolicy.Route.LOCAL)
+    }
+
+    fun setNetworkRecognitionAllowed(allowed: Boolean) {
+        // Revoking consent also cancels an active recognizer and any queued retry.
+        stop(false); handsFree = false
+        allowNetworkRecognition = allowed
+        status = if (allowed) "Service vocal Android autorisé en secours pour cette session. Il peut transmettre votre audio."
+                 else "Reconnaissance réseau désactivée. Seul le moteur local sera utilisé."
+    }
+
+    private fun startRecognition(local: Boolean) {
+        if (closed || !foreground || (!local && !allowNetworkRecognition)) return
         if (!local && !SpeechRecognizer.isRecognitionAvailable(app)) { fail("Aucun service de reconnaissance installé."); return }
         try {
             val id = UUID.randomUUID().toString()
@@ -239,11 +252,14 @@ class CompanionController(context: Context) {
                 override fun onRmsChanged(rmsdB: Float) { if (valid()) microphoneLevel = (rmsdB / 12f).coerceIn(0f, 1f) }
                 override fun onBufferReceived(buffer: ByteArray?) {}
                 override fun onEndOfSpeech() { if (valid()) { mood = CompanionMood.THINKING; status = "Transcription en cours" } }
-                override fun onError(error: Int) { if (valid()) { cancelRecognition(); fail(when (error) {
-                    SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> "Microphone refusé. Vérifiez les autorisations."
-                    SpeechRecognizer.ERROR_NO_MATCH, SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> "Je n’ai pas compris. Réessayez ou écrivez votre message."
-                    else -> "Reconnaissance vocale indisponible (code $error). Aucune réponse IA inventée."
-                }) } }
+                override fun onError(error: Int) { if (valid()) {
+                    cancelRecognition()
+                    if (SpeechInputPolicy.retryWithService(error, local, allowNetworkRecognition)) {
+                        val turn = generation
+                        status = "Langue indisponible en local · essai du service vocal Android autorisé"
+                        main.post { if (turn == generation && foreground && !closed && allowNetworkRecognition) startRecognition(false) }
+                    } else fail(SpeechInputPolicy.errorMessage(error, language, local))
+                } }
                 override fun onResults(results: Bundle?) { if (valid()) {
                     val text = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()
                     cancelRecognition()
@@ -255,12 +271,7 @@ class CompanionController(context: Context) {
                 override fun onEvent(eventType: Int, params: Bundle?) {}
             })
             mood = CompanionMood.LISTENING
-            recognition?.startListening(Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-                putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-                putExtra(RecognizerIntent.EXTRA_LANGUAGE, language)
-                putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
-                putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, local)
-            })
+            recognition?.startListening(SpeechInputIntents.recognize(language, local))
             main.postDelayed({ if (recognitionId == id) { cancelRecognition(); fail("Écoute arrêtée après 25 secondes. Appuyez pour recommencer.") } }, 25000)
         } catch (_: Exception) { cancelRecognition(); fail("Impossible de démarrer la reconnaissance vocale.") }
     }
@@ -272,7 +283,9 @@ class CompanionController(context: Context) {
     }
     private fun cancelRecognition() {
         recognitionId = null
-        recognition?.cancel(); recognition?.destroy(); recognition = null
+        val previous = recognition
+        recognition = null
+        runCatching { previous?.cancel() }; runCatching { previous?.destroy() }
         microphoneLevel = 0f
     }
     fun stop(announce: Boolean = true) {

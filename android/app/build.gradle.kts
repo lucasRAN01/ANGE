@@ -11,8 +11,8 @@ android {
         applicationId = "com.ange.mobile"
         minSdk = 26
         targetSdk = 35
-        versionCode = 4
-        versionName = "2.2.0-jarvis-base"
+        versionCode = 5
+        versionName = "2.2.1-voice-fix"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     buildFeatures { compose = true; buildConfig = true }

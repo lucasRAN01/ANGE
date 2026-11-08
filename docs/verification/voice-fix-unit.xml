@@ -1,0 +1,56 @@
+<testsuites>
+  <testsuite name="com.ange.mobile.CompanionPolicyTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-08T15:26:44" hostname="LUCAS" time="0.217">
+    <properties />
+    <testcase name="animationCanBeStopped" classname="com.ange.mobile.CompanionPolicyTest" time="0.008" />
+    <testcase name="httpsAllowed" classname="com.ange.mobile.CompanionPolicyTest" time="0.11" />
+    <testcase name="offlineAnswersAreLimitedAndDeterministic" classname="com.ange.mobile.CompanionPolicyTest" time="0.048" />
+    <testcase name="rejectsUnsafeAddresses" classname="com.ange.mobile.CompanionPolicyTest" time="0.022" />
+    <testcase name="emulatorHttpDebugOnly" classname="com.ange.mobile.CompanionPolicyTest" time="0.0" />
+    <testcase name="speakingUsesAllMouthPoses" classname="com.ange.mobile.CompanionPolicyTest" time="0.026" />
+    <testcase name="idleBlinksAndStatesRemainInAtlas" classname="com.ange.mobile.CompanionPolicyTest" time="0.001" />
+    <system-out />
+    <system-err />
+  </testsuite>
+  <testsuite name="com.ange.mobile.DeviceActionPolicyTest" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-11-08T15:26:44" hostname="LUCAS" time="0.159">
+    <properties />
+    <testcase name="statementsAboutCommandsAreNotExecuted" classname="com.ange.mobile.DeviceActionPolicyTest" time="0.051" />
+    <testcase name="spokenFrenchDurationsAreRecognized" classname="com.ange.mobile.DeviceActionPolicyTest" time="0.045" />
+    <testcase name="smsPreservesAccentsAndNeedsReview" classname="com.ange.mobile.DeviceActionPolicyTest" time="0.019" />
+    <testcase name="alarmsAndTimersAreBounded" classname="com.ange.mobile.DeviceActionPolicyTest" time="0.009" />
+    <testcase name="phoneNumbersAreNotGuessedFromContactNames" classname="com.ange.mobile.DeviceActionPolicyTest" time="0.004" />
+    <testcase name="settingsAndCameraAreNativeActions" classname="com.ange.mobile.DeviceActionPolicyTest" time="0.006" />
+    <testcase name="installedAppNamesAreExactAndAccentInsensitive" classname="com.ange.mobile.DeviceActionPolicyTest" time="0.006" />
+    <testcase name="mapSearchAndCalendarAreStructured" classname="com.ange.mobile.DeviceActionPolicyTest" time="0.006" />
+    <testcase name="onlyBrowserWebSchemesAreAllowed" classname="com.ange.mobile.DeviceActionPolicyTest" time="0.009" />
+    <testcase name="volumeIsMediaOnlyAndBounded" classname="com.ange.mobile.DeviceActionPolicyTest" time="0.001" />
+    <system-out />
+    <system-err />
+  </testsuite>
+  <testsuite name="com.ange.mobile.JarvisVoiceTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-08T15:26:44" hostname="LUCAS" time="0.004">
+    <properties />
+    <testcase name="knownSensitivePatternsAreNotReadOut" classname="com.ange.mobile.JarvisVoiceTest" time="0.003" />
+    <testcase name="privacySwitchPreservesExplicitUnfilteredReadout" classname="com.ange.mobile.JarvisVoiceTest" time="0.0" />
+    <testcase name="upstreamNormalizationAndVoiceCleanup" classname="com.ange.mobile.JarvisVoiceTest" time="0.001" />
+    <system-out />
+    <system-err />
+  </testsuite>
+  <testsuite name="com.ange.mobile.OnDevicePolicyTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-08T15:26:44" hostname="LUCAS" time="0.03">
+    <properties />
+    <testcase name="freeModesExcludePaidCloud" classname="com.ange.mobile.OnDevicePolicyTest" time="0.002" />
+    <testcase name="pinnedModelOnly" classname="com.ange.mobile.OnDevicePolicyTest" time="0.0" />
+    <testcase name="hiddenThinkingIsNeverDisplayed" classname="com.ange.mobile.OnDevicePolicyTest" time="0.002" />
+    <testcase name="contextIsBounded" classname="com.ange.mobile.OnDevicePolicyTest" time="0.025" />
+    <system-out />
+    <system-err />
+  </testsuite>
+  <testsuite name="com.ange.mobile.SpeechInputPolicyTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-08T15:26:44" hostname="LUCAS" time="0.008">
+    <properties />
+    <testcase name="offlineChoiceNeverUsesTheDefaultServiceWithoutConsent" classname="com.ange.mobile.SpeechInputPolicyTest" time="0.003" />
+    <testcase name="timeoutNoMatchPermissionsAndBusyDoNotTriggerNetworkFallback" classname="com.ange.mobile.SpeechInputPolicyTest" time="0.001" />
+    <testcase name="languageTagsIncludeTheRequestedRegion" classname="com.ange.mobile.SpeechInputPolicyTest" time="0.0" />
+    <testcase name="unsupportedAndMissingModelHaveDistinctActionableMessages" classname="com.ange.mobile.SpeechInputPolicyTest" time="0.003" />
+    <testcase name="consentAllowsOneFallbackForUnsupportedOrMissingLocalLanguage" classname="com.ange.mobile.SpeechInputPolicyTest" time="0.0" />
+    <system-out />
+    <system-err />
+  </testsuite>
+</testsuites>

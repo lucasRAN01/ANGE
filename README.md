@@ -8,6 +8,8 @@ ANGE Companion ajoute une compagne animée et parlante au design `ANGE_2_0_Desig
 
 **Bot 3D, voix et actions Android.** Un robot en vraie 3D locale s’ajoute au portrait illustré. Des commandes explicites permettent d’ouvrir les applications, de préparer appels/SMS/événements, de demander alarmes/minuteurs et de régler le volume multimédia. La discussion vocale peut enchaîner les tours tant qu’ANGE reste au premier plan. Voir [le guide bot 3D et commandes](docs/BOT_3D_ET_ACTIONS.md).
 
+**Correctif vocal Android 2.2.1 :** les erreurs 12 (langue refusée) et 13 (modèle vocal indisponible) sont expliquées. Avec votre autorisation de session, le service vocal Android est essayé une fois si le moteur local refuse la langue. Sans autorisation, l’audio reste limité au moteur local. Voir [le dépannage sur Galaxy A53](docs/RECONNAISSANCE_VOCALE.md).
+
 **IA directement sur le téléphone.** Le modèle libre Qwen3 0.6B INT4 est téléchargé ou importé une fois (347 Mo). Les réponses sont ensuite calculées sur le CPU du téléphone, sans PC, Supabase, compte fournisseur ni API payante. Voir [le guide Galaxy A53](docs/TELEPHONE_GRATUIT.md). Aucun téléchargement de modèle n’est lancé sans appui et confirmation. Une mise à jour de l’APK conserve le modèle déjà installé.
 
 ## Compagne mobile

@@ -1,0 +1,9 @@
+com.ange.mobile.DeviceActionsSmokeTest:...
+com.ange.mobile.JarvisFoundationSmokeTest:...
+com.ange.mobile.PhoneInferenceSmokeTest:.
+com.ange.mobile.RobotRenderingSmokeTest:.
+com.ange.mobile.SpeechInputSmokeTest:..
+
+Time: 55.169
+
+OK (10 tests)
