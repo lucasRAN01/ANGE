@@ -11,8 +11,8 @@ android {
         applicationId = "com.ange.mobile"
         minSdk = 26
         targetSdk = 35
-        versionCode = 6
-        versionName = "2.3.0-companion"
+        versionCode = 7
+        versionName = "2.3.1-standard"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     buildFeatures { compose = true; buildConfig = true }

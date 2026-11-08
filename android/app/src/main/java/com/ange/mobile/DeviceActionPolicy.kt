@@ -10,7 +10,7 @@ sealed class DeviceAction(val title: String, val detail: String, val confirmatio
     data class Dial(val number: String) : DeviceAction("Préparer un appel", "Numéro : $number. Vous appuyez ensuite sur Appeler dans Téléphone.", true)
     data class CallContact(val name: String) : DeviceAction("Chercher $name", "Recherche locale dans vos contacts.")
     data class CallNumber(val number: String, val label: String = number) : DeviceAction("Appeler $label", "Appel téléphonique vers $label\n$number\nL’appel sera lancé après votre confirmation.", true)
-    data class Navigate(val direction: String) : DeviceAction("Naviguer : $direction", "Navigation Android autorisée dans les réglages d’accessibilité.")
+    data class Navigate(val direction: String) : DeviceAction("Naviguer : $direction", "La version standard peut ouvrir l’accueil Android sans accès à l’écran des autres applications.")
     data class Sms(val number: String, val body: String) : DeviceAction("Préparer un SMS", "À : $number\n\n$body\n\nANGE ouvre le brouillon ; vous seul appuyez sur Envoyer.", true)
     data class Map(val query: String) : DeviceAction("Afficher un lieu", query)
     data class Search(val query: String) : DeviceAction("Rechercher sur le Web", query)

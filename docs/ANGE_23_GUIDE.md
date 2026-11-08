@@ -1,5 +1,7 @@
 # ANGE 2.3 — mini-compagne et commandes du téléphone
 
+**Mise à jour 2.3.1 standard :** le service d’accessibilité a été supprimé. Les instructions d’activation de Navigation ANGE ci-dessous décrivent la version 2.3 historique et ne s’appliquent plus. Utiliser désormais `ANGE-Mobile-Standard-231-debug.apk`, code 7. Accueil, contacts/appels confirmés, mini-compagne, caméra et conversations restent disponibles. Voir [le guide Play Protect](PLAY_PROTECT.md) pour l’installation.
+
 Cette version simplifie l’interface Android en quatre espaces : **ANGE**, **Actions**, **Mémoire**, **Réglages**. Elle ajoute une mini-compagne inspirée de la photo fournie, des appels par nom de contact, une navigation facultative et des raccourcis appris explicitement. L’heure, la date et la batterie sont lues dans Android avant tout appel à un modèle, dans les quatre modes.
 
 ## Mettre à jour et tester les fonctions locales

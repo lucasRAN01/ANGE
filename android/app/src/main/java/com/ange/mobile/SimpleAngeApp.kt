@@ -179,7 +179,7 @@ fun SimpleAngeApp(controller: CompanionController, voiceRequest: Int = 0) {
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(14.dp)) {
         Text("Je m’en occupe.",fontSize=28.sp,fontWeight=FontWeight.SemiBold)
         Text("Des commandes locales. Le modèle n’exécute aucune action.",color=Muted,fontSize=12.sp)
-        listOf("Ouvre appareil photo","Quelle heure est-il ?","Quel jour sommes-nous ?","Combien de batterie me reste-t-il ?","Ouvre paramètres","Volume à 40 %","Retour","Va à l’accueil","Applications récentes","Descends","Monte").forEach { sample ->
+        listOf("Ouvre appareil photo","Quelle heure est-il ?","Quel jour sommes-nous ?","Combien de batterie me reste-t-il ?","Ouvre paramètres","Volume à 40 %","Va à l’accueil").forEach { sample ->
             OutlinedButton(onClick={ controller.send(sample) },modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(14.dp)) { Text(sample) }
         }
         Text("Applications",fontSize=20.sp)
@@ -250,8 +250,7 @@ fun SimpleAngeApp(controller: CompanionController, voiceRequest: Int = 0) {
         },modifier=Modifier.fillMaxWidth()) { Text(if(FloatingCompanionService.running) "Actualiser la mini-compagne" else "Activer la mini-compagne") }
         if(FloatingCompanionService.running) TextButton(onClick={ FloatingCompanionService.stop(context) }) { Text("Fermer la mini-compagne flottante") }
         if(floatingStatus.isNotBlank()) Text(floatingStatus,fontSize=12.sp,color=Lilac)
-        OutlinedButton(onClick={ context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) },modifier=Modifier.fillMaxWidth()) { Text("Activer Navigation ANGE · facultatif") }
-        Text("Accessibilité : Retour, Accueil, Récentes et défilement sur commande. Aucun clic arbitraire ou envoi automatique. Contacts et Téléphone sont demandés lors d’un appel ; le destinataire est toujours confirmé.",fontSize=11.sp,color=Muted)
+        Text("Version standard : aucun service d’accessibilité, aucune lecture de l’écran des autres applications. Retour, Récentes et leur défilement restent manuels. L’ouverture de l’accueil et des applications utilise les fonctions publiques Android. Contacts et Téléphone sont demandés seulement lors d’un appel.",fontSize=11.sp,color=Muted)
         HorizontalDivider(color=Muted.copy(alpha=.2f)); Text("VOIX",fontSize=10.sp,color=Mint,letterSpacing=2.sp)
         Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) { listOf("fr","en","mg").forEach { lang -> FilterChip(selected=controller.language==lang,onClick={ controller.stop(); controller.language=lang; controller.selectedVoice=""; controller.saveSettings() },label={ Text(lang.uppercase()) }) } }
         Toggle("Lire les réponses",controller.autoSpeak) { controller.autoSpeak=it; controller.saveSettings() }
@@ -267,7 +266,7 @@ fun SimpleAngeApp(controller: CompanionController, voiceRequest: Int = 0) {
         OutlinedButton(onClick={ runCatching { context.startActivity(SpeechInputIntents.settings()) }.onFailure { context.startActivity(Intent(Settings.ACTION_SETTINGS)) } }) { Text("Réglages de reconnaissance") }
         TextButton(onClick={ runCatching { context.startActivity(Intent("com.android.settings.TTS_SETTINGS")) }.onFailure { context.startActivity(Intent(Settings.ACTION_SETTINGS)) } }) { Text("Réglages de lecture vocale") }
         TextButton(onClick=onAdvanced) { Text("Anciennes vues et provenance Jarvis") }
-        Text("ANGE 2.3 · interface et fonctions en développement. Animation 2D par poses, robot procédural 3D en option. Pas de contrôle universel des applications, de clonage vocal ou de réentraînement automatique.",fontSize=10.sp,color=Muted)
+        Text("ANGE 2.3.1 standard · sans service d’accessibilité. Animation 2D par poses, robot procédural 3D en option. Pas de contrôle universel des applications, de clonage vocal ou de réentraînement automatique.",fontSize=10.sp,color=Muted)
         Spacer(Modifier.height(20.dp))
     }
     if(download) AlertDialog(onDismissRequest={ download=false },title={ Text("Installer le modèle local ?") },text={ Text("347 Mo depuis Hugging Face, vérifiés par SHA-256. Gardez ANGE ouverte pendant le transfert. Ce modèle ne garantit pas une conversation du niveau d’un grand modèle en ligne.") },confirmButton={ TextButton(onClick={ download=false; controller.downloadModel() }) { Text("Télécharger") } },dismissButton={ TextButton(onClick={ download=false }) { Text("Annuler") } })

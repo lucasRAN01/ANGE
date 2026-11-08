@@ -2,6 +2,8 @@
 
 ADVANCED NEURAL GUARDIAN ENGINE
 
+**Version actuelle Android : 2.3.1 standard.** Suite au blocage Play Protect signalé, le service d’accessibilité et sa capacité d’accès à l’écran des autres applications ont été retirés. Mini-compagne, appels par contacts confirmés, caméra et discussion restent disponibles. Retour/Récentes/défilement interapplications ne sont plus proposés ; Accueil utilise une intention publique Android. Garder Play Protect actif : [modifications et instructions](docs/PLAY_PROTECT.md). Les mentions de navigation par accessibilité dans les documents 2.3 ci-dessous sont historiques.
+
 ANGE Companion ajoute une compagne animée et parlante au design `ANGE_2_0_Design_Fidele`, avec une application Android native et un service PC local/cloud. Le projet suit A.docx comme cahier des charges de l’écosystème. **Il ne réalise pas encore l’intégralité de cet assistant.**
 
 **ANGE 2.3 : interface Android simplifiée et mini-compagne flottante inspirée de votre photo.** Quatre espaces (ANGE, Actions, Mémoire, Réglages), douze poses animées, déplacement au toucher et balades facultatives. L’heure/date/batterie utilisent Android dans tous les modes. « Appelle Babe » cherche le contact localement et prépare un véritable appel après votre confirmation ; les permissions Contacts/Téléphone sont demandées à l’action. Navigation facultative : Retour, Accueil, Récentes et défilement via un service d’accessibilité activé manuellement. Raccourcis explicitement appris et conservés localement, sans réentraînement du modèle. Voir [le guide 2.3](docs/ANGE_23_GUIDE.md), [l’étude d’animation](docs/ETUDE_ANIMATION_ANGE.md) et [les vérifications](docs/ETAT_COMPAGNE_23.md).

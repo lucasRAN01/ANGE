@@ -24,7 +24,8 @@ class AndroidDeviceActions(private val context: Context) {
             ?: throw ActivityNotFoundException("Application non disponible.")
         is DeviceAction.Dial -> Intent(Intent.ACTION_DIAL,Uri.fromParts("tel",action.number,null))
         is DeviceAction.CallNumber -> Intent(Intent.ACTION_CALL,Uri.fromParts("tel",action.number,null))
-        is DeviceAction.CallContact, is DeviceAction.Navigate -> null
+        is DeviceAction.CallContact -> null
+        is DeviceAction.Navigate -> if(action.direction=="accueil") Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME) else null
         is DeviceAction.Sms -> Intent(Intent.ACTION_SENDTO,Uri.fromParts("smsto",action.number,null)).putExtra("sms_body",action.body)
         is DeviceAction.Map -> Intent(Intent.ACTION_VIEW,Uri.parse("https://www.google.com/maps/dir/").buildUpon().appendQueryParameter("api","1").appendQueryParameter("destination",action.query).build())
         is DeviceAction.Search -> Intent(Intent.ACTION_VIEW,Uri.parse("https://www.google.com/search").buildUpon().appendQueryParameter("q",action.query).build())
@@ -40,8 +41,7 @@ class AndroidDeviceActions(private val context: Context) {
     }
     fun execute(action: DeviceAction): String {
         if (action is DeviceAction.Navigate) {
-            require(AngeNavigationService.navigate(action.direction)) { "Activez Navigation ANGE dans Réglages → Accessibilité. Certaines applications ne permettent pas le défilement." }
-            return "Navigation demandée : ${action.direction}."
+            require(action.direction=="accueil") { "Cette version standard ne contrôle pas les boutons Retour, Récentes ou le défilement des autres applications. Utilisez les commandes Android à l’écran." }
         }
         if (action is DeviceAction.CallNumber) require(context.checkSelfPermission(android.Manifest.permission.CALL_PHONE) == android.content.pm.PackageManager.PERMISSION_GRANTED) { "Autorisation Téléphone nécessaire pour lancer l’appel." }
         if(action is DeviceAction.Volume) {
@@ -64,6 +64,7 @@ class AndroidDeviceActions(private val context: Context) {
             is DeviceAction.Sms -> "Brouillon demandé à l’application SMS. Aucun message envoyé par ANGE."
             is DeviceAction.Dial -> "Numéro préparé dans Téléphone. Appuyez vous-même sur Appeler."
             is DeviceAction.CallNumber -> "Appel demandé à Téléphone : ${action.label}."
+            is DeviceAction.Navigate -> "Ouverture de l’accueil demandée à Android."
             is DeviceAction.Alarm, is DeviceAction.Timer -> "Demande transmise à l’Horloge. Vérifiez l’heure ou la durée dans cette application."
             is DeviceAction.Calendar -> "Événement proposé à l’Agenda. Choisissez la date puis enregistrez-le."
             else -> "Ouverture demandée : ${action.title}."

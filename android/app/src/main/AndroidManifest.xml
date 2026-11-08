@@ -17,10 +17,6 @@
         <intent><action android:name="android.intent.action.TTS_SERVICE"/></intent>
     </queries>
     <application android:networkSecurityConfig="@xml/network_security_config" android:icon="@drawable/ic_ange" android:allowBackup="false" android:theme="@android:style/Theme.Material.NoActionBar" android:label="A.N.G.E 2.0" android:usesCleartextTraffic="false">
-        <service android:name=".AngeNavigationService" android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE" android:exported="true" android:label="Navigation ANGE">
-            <intent-filter><action android:name="android.accessibilityservice.AccessibilityService"/></intent-filter>
-            <meta-data android:name="android.accessibilityservice" android:resource="@xml/ange_accessibility"/>
-        </service>
         <service android:name=".FloatingCompanionService" android:exported="false" android:foregroundServiceType="microphone|specialUse">
             <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="User-started visible draggable animated companion with tap-to-talk, persistent stop notification, no boot autostart."/>
         </service>
