@@ -1,5 +1,8 @@
 # Étude d’animation de la mini-compagne ANGE
 
+> Version actuelle 2.3.2 : voir [MINI_232.md](MINI_232.md). Mini-compagne unique, ancien robot/portrait alternatif retirés. Le service d’accessibilité des versions précédentes reste supprimé. Caméra pour la lampe, verrouillage facultatif limité et capture avec consentement Android sont les nouveaux accès distincts. Les descriptions historiques ci-dessous ne sont pas toutes des fonctions actuelles.
+
+
 ## Direction visuelle et interface
 
 Photo de référence fournie par l’utilisateur : cheveux noirs bouclés, mèches autour du visage, boucles dorées, robe blanche fleurie à manches bouffantes. L’atlas généré reprend ces repères avec des proportions de mini-personnage adulte stylisé. La photo originale n’est pas incluse dans le dépôt ou l’APK. L’illustration est une interprétation, pas une reconstruction biométrique exacte.

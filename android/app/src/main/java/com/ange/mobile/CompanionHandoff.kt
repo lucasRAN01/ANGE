@@ -5,5 +5,6 @@ internal object CompanionHandoff {
     var action: DeviceAction? = null
     var contacts: List<ContactNumber> = emptyList()
     var startVoice = false
-    fun clear() { action=null; contacts=emptyList(); startVoice=false }
+    var openChat = false
+    fun clear() { action=null; contacts=emptyList(); startVoice=false; openChat=false }
 }

@@ -1,5 +1,8 @@
 # Fonctions du téléphone à autoriser explicitement
 
+> Version actuelle 2.3.2 : voir [MINI_232.md](MINI_232.md). Mini-compagne unique, ancien robot/portrait alternatif retirés. Le service d’accessibilité des versions précédentes reste supprimé. Caméra pour la lampe, verrouillage facultatif limité et capture avec consentement Android sont les nouveaux accès distincts. Les descriptions historiques ci-dessous ne sont pas toutes des fonctions actuelles.
+
+
 Projet de fonctions pour votre appareil personnel, désactivées avant vos autorisations Android.
 
 1. **Contacts et appel par nom** : après « Appelle Babe », lire les noms et numéros des contacts localement, présenter les correspondances si le nom est ambigu, puis montrer le destinataire et le numéro avant de lancer un véritable appel avec votre confirmation. Permissions Android : Contacts et Téléphone. Aucun carnet d’adresses envoyé au modèle IA.

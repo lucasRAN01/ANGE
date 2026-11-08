@@ -21,12 +21,17 @@ sealed class DeviceAction(val title: String, val detail: String, val confirmatio
     data class Settings(val kind: String) : DeviceAction("Ouvrir les réglages", kind)
     data class Volume(val percent: Int) : DeviceAction("Régler le volume multimédia", "$percent % · Le volume des appels et des alarmes reste distinct.")
     data object Camera : DeviceAction("Ouvrir l’appareil photo", "Vous prenez vous-même la photo.")
+    data class Torch(val enabled: Boolean) : DeviceAction(if(enabled) "Allumer la lampe" else "Éteindre la lampe", "Commande du flash du téléphone, sans prise de photo.")
+    data object LockPhone : DeviceAction("Verrouiller le téléphone", "Activation Android du droit de verrouillage nécessaire une première fois. Aucune politique d’effacement.")
+    data object Screenshot : DeviceAction("Faire une capture d’écran", "Android demande votre accord. L’image est enregistrée sur le téléphone, jamais envoyée au modèle.")
+    data class RadioPanel(val kind: String,val enabled: Boolean) : DeviceAction(if(enabled) "Activer $kind" else "Désactiver $kind", "Android affiche le panneau ; vous validez son interrupteur.")
 }
 
 sealed interface ActionParse {
     data object None : ActionParse
     data class Found(val action: DeviceAction) : ActionParse
-    data class Problem(val message: String) : ActionParse
+    data class Problem(val message: String,val appQuery: String? = null) : ActionParse
+    data class ChooseApp(val apps: List<LaunchableApp>) : ActionParse
 }
 
 /** Only explicit user commands enter this parser. Model output is never executed. */
@@ -41,6 +46,17 @@ object DeviceActionPolicy {
         val navigation = mapOf("retour" to "retour", "reviens en arriere" to "retour", "va a l accueil" to "accueil", "ecran d accueil" to "accueil", "applications recentes" to "récentes", "descends" to "descendre", "fais defiler vers le bas" to "descendre", "monte" to "monter", "fais defiler vers le haut" to "monter")
         val navigationText=text.replace('’',' ').replace('\'',' ').replace(Regex("\\s+")," ")
         navigation[navigationText]?.let { return found(DeviceAction.Navigate(it)) }
+        if(navigationText in setOf("verrouille le telephone","verrouiller le telephone","verrouille mon telephone","verrouille l ecran","eteins l ecran")) return found(DeviceAction.LockPhone)
+        if(navigationText in setOf("capture ecran","capture d ecran","fais une capture d ecran","prends une capture d ecran","capture l ecran")) return found(DeviceAction.Screenshot)
+        Regex("^(allume|allumer|active|activer|eteins|eteindre|desactive|desactiver) (?:la |le |les |l['’] ?)?(lampe|torche|lampe torche|flash|wifi|wi fi|wi-fi|bluetooth|donnees mobiles|4g|5g)$").matchEntire(text)?.let {
+            val enabled=it.groupValues[1] in setOf("allume","allumer","active","activer")
+            return found(when(it.groupValues[2]) {
+                "lampe","torche","lampe torche","flash" -> DeviceAction.Torch(enabled)
+                "wifi","wi fi","wi-fi" -> DeviceAction.RadioPanel("Wi-Fi",enabled)
+                "bluetooth" -> DeviceAction.RadioPanel("Bluetooth",enabled)
+                else -> DeviceAction.RadioPanel("Données mobiles",enabled)
+            })
+        }
         Regex("^(?:prepare|prépare|envoie|envoyer|ecris|écris)\\s+(?:un\\s+)?(?:sms|message)\\s+(?:a|à|au)\\s+([+\\d][\\d ()+.-]{2,24}?)\\s*:\\s*(.+)$",setOf(RegexOption.IGNORE_CASE,RegexOption.DOT_MATCHES_ALL)).matchEntire(original)?.let {
             val number = number(it.groupValues[1]) ?: return problem("Indiquez un numéro de téléphone valide, sans nom de contact.")
             return found(DeviceAction.Sms(number,it.groupValues[2].take(1000)))
@@ -84,8 +100,11 @@ object DeviceActionPolicy {
                 val uri=runCatching { java.net.URI(url) }.getOrNull()
                 return if(uri?.scheme in setOf("https","http") && !uri?.host.isNullOrBlank() && uri?.userInfo==null) found(DeviceAction.Website(url)) else problem("Adresse Web invalide.")
             }
-            val matches=apps.filter { normalized(it.label)==name || it.packageName.lowercase(Locale.ROOT)==name }
-            return when(matches.size) { 1 -> found(DeviceAction.OpenApp(matches.single())); 0 -> problem("Application « $name » introuvable. Choisissez son nom exact dans Actions → Applications."); else -> problem("Plusieurs applications portent ce nom. Choisissez-en une dans Actions → Applications.") }
+            return when(val match=AppResolver.resolve(name,apps)) {
+                is AppMatch.One -> found(DeviceAction.OpenApp(match.app))
+                is AppMatch.Choose -> ActionParse.ChooseApp(match.apps)
+                AppMatch.None -> ActionParse.Problem("Application « $name » introuvable parmi les applications visibles. Actualisez la liste dans Actions ou choisissez l’application dans cette liste.",name)
+            }
         }
         if(text.startsWith("alarme ") || text.startsWith("reveil ")) return problem("Exemple : Alarme à 7h30, avec une heure de 00:00 à 23:59.")
         if(text.startsWith("minuteur ")) return problem("Exemple : Minuteur de 5 minutes.")

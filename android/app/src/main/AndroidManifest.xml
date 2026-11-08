@@ -1,5 +1,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.RECORD_AUDIO"/>
+    <uses-permission android:name="android.permission.CAMERA"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION"/>
+    <uses-feature android:name="android.hardware.camera" android:required="false"/>
+    <uses-feature android:name="android.hardware.camera.flash" android:required="false"/>
     <uses-permission android:name="android.permission.READ_CONTACTS"/>
     <uses-permission android:name="android.permission.CALL_PHONE"/>
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW"/>
@@ -10,14 +14,19 @@
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS"/>
     <uses-permission android:name="com.android.alarm.permission.SET_ALARM"/>
-    <uses-feature android:glEsVersion="0x00020000" android:required="false"/>
     <queries>
         <intent><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent>
         <intent><action android:name="android.speech.RecognitionService"/></intent>
         <intent><action android:name="android.intent.action.TTS_SERVICE"/></intent>
     </queries>
     <application android:networkSecurityConfig="@xml/network_security_config" android:icon="@drawable/ic_ange" android:allowBackup="false" android:theme="@android:style/Theme.Material.NoActionBar" android:label="A.N.G.E 2.0" android:usesCleartextTraffic="false">
-        <service android:name=".FloatingCompanionService" android:exported="false" android:foregroundServiceType="microphone|specialUse">
+        <receiver android:name=".AngeLockAdmin" android:permission="android.permission.BIND_DEVICE_ADMIN" android:exported="true" android:label="ANGE · verrouillage uniquement">
+            <meta-data android:name="android.app.device_admin" android:resource="@xml/ange_lock_admin"/>
+            <intent-filter><action android:name="android.app.action.DEVICE_ADMIN_ENABLED"/></intent-filter>
+        </receiver>
+        <activity android:name=".ScreenshotActivity" android:exported="false" android:excludeFromRecents="true" android:theme="@android:style/Theme.Translucent.NoTitleBar"/>
+        <service android:name=".ScreenshotService" android:exported="false" android:foregroundServiceType="mediaProjection"/>
+        <service android:name=".FloatingCompanionService" android:exported="false" android:stopWithTask="false" android:foregroundServiceType="microphone|specialUse">
             <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="User-started visible draggable animated companion with tap-to-talk, persistent stop notification, no boot autostart."/>
         </service>
         <activity android:name=".MainActivity" android:exported="true" android:launchMode="singleTop">

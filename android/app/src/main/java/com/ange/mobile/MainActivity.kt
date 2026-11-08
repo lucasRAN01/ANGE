@@ -43,22 +43,33 @@ private val Ice = Color(0xFF8BEAFF)
 private val Labels = listOf("Démarrage", "Accueil", "Mobile", "Voix", "Chat IA", "Cerveau IA", "Mémoire", "Appareils", "Contrôles", "Paramètres", "Compagne")
 class MainActivity : ComponentActivity() {
     private lateinit var companion: CompanionController
+    private val runtimeOwner="activity-"+java.util.UUID.randomUUID()
     private var voiceRequest by mutableIntStateOf(0)
+    private var chatRequest by mutableIntStateOf(0)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        companion = CompanionController(this)
-        setContent { SimpleAngeApp(companion,voiceRequest) }
+        companion = CompanionRuntime.acquire(this,runtimeOwner)
+        setContent { SimpleAngeApp(companion,voiceRequest,chatRequest) }
+        requestLockPermissionIfNeeded(intent)
     }
-    override fun onStart() { super.onStart(); visible=true; if (::companion.isInitialized) { companion.onForeground(); FloatingCompanionService.pauseConversation(); consumeHandoff() } }
-    override fun onStop() { visible=false; if (::companion.isInitialized) companion.onBackground(); super.onStop() }
-    override fun onNewIntent(intent: android.content.Intent) { super.onNewIntent(intent); consumeHandoff() }
+    override fun onStart() { super.onStart(); visible=true; if (::companion.isInitialized) { companion.onForeground(); companion.refreshApps(); FloatingCompanionService.restoreIfWanted(this,companion); consumeHandoff() } }
+    override fun onStop() { visible=false; if (::companion.isInitialized && !FloatingCompanionService.running) companion.onBackground(); super.onStop() }
+    override fun onNewIntent(intent: android.content.Intent) { super.onNewIntent(intent); consumeHandoff(); requestLockPermissionIfNeeded(intent) }
+    private fun requestLockPermissionIfNeeded(request: android.content.Intent) {
+        if(request.action==AngeLockAdmin.REQUEST_LOCK_PERMISSION) {
+            request.action=null
+            // Android refuses ADD_DEVICE_ADMIN with NEW_TASK. Launch from this visible activity.
+            if(!AngeLockAdmin.active(this)) startActivity(AngeLockAdmin.request(this))
+        }
+    }
     private fun consumeHandoff() {
-        val action=CompanionHandoff.action; val contacts=CompanionHandoff.contacts; val voice=CompanionHandoff.startVoice
+        val action=CompanionHandoff.action; val contacts=CompanionHandoff.contacts; val voice=CompanionHandoff.startVoice; val chat=CompanionHandoff.openChat
         CompanionHandoff.clear()
         if(action!=null) companion.requestAction(action) else if(contacts.isNotEmpty()) companion.acceptContactChoices(contacts)
         if(voice) voiceRequest++
+        if(chat) { companion.stop(false); chatRequest++ }
     }
-    override fun onDestroy() { if (::companion.isInitialized) companion.close(); super.onDestroy() }
+    override fun onDestroy() { if (::companion.isInitialized) CompanionRuntime.release(runtimeOwner); super.onDestroy() }
     companion object { var visible=false; private set }
 }
 @Composable

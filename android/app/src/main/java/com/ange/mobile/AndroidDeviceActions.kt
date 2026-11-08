@@ -10,6 +10,9 @@ import android.provider.AlarmClock
 import android.provider.CalendarContract
 import android.provider.MediaStore
 import android.provider.Settings
+import android.os.Build
+import android.hardware.camera2.CameraManager
+import android.hardware.camera2.CameraCharacteristics
 
 class AndroidDeviceActions(private val context: Context) {
     @Suppress("DEPRECATION")
@@ -37,6 +40,15 @@ class AndroidDeviceActions(private val context: Context) {
         is DeviceAction.Calendar -> Intent(Intent.ACTION_INSERT,CalendarContract.Events.CONTENT_URI).putExtra(CalendarContract.Events.TITLE,action.event)
         is DeviceAction.Settings -> Intent(when(action.kind) { "Wi-Fi" -> Settings.ACTION_WIFI_SETTINGS; "Bluetooth" -> Settings.ACTION_BLUETOOTH_SETTINGS; "son" -> Settings.ACTION_SOUND_SETTINGS; else -> Settings.ACTION_SETTINGS })
         DeviceAction.Camera -> Intent(MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA)
+        DeviceAction.LockPhone -> if(AngeLockAdmin.active(context)) null else Intent(context,MainActivity::class.java)
+            .setAction(AngeLockAdmin.REQUEST_LOCK_PERMISSION).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+        DeviceAction.Screenshot -> Intent(context,ScreenshotActivity::class.java)
+        is DeviceAction.Torch -> null
+        is DeviceAction.RadioPanel -> Intent(when(action.kind) {
+            "Wi-Fi" -> if(Build.VERSION.SDK_INT>=29) Settings.Panel.ACTION_WIFI else Settings.ACTION_WIFI_SETTINGS
+            "Bluetooth" -> Settings.ACTION_BLUETOOTH_SETTINGS
+            else -> if(Build.VERSION.SDK_INT>=29) Settings.Panel.ACTION_INTERNET_CONNECTIVITY else Settings.ACTION_DATA_ROAMING_SETTINGS
+        })
         is DeviceAction.Volume -> null
     }
     fun execute(action: DeviceAction): String {
@@ -44,6 +56,14 @@ class AndroidDeviceActions(private val context: Context) {
             require(action.direction=="accueil") { "Cette version standard ne contrôle pas les boutons Retour, Récentes ou le défilement des autres applications. Utilisez les commandes Android à l’écran." }
         }
         if (action is DeviceAction.CallNumber) require(context.checkSelfPermission(android.Manifest.permission.CALL_PHONE) == android.content.pm.PackageManager.PERMISSION_GRANTED) { "Autorisation Téléphone nécessaire pour lancer l’appel." }
+        if(action is DeviceAction.Torch) {
+            val cameras=context.getSystemService(Context.CAMERA_SERVICE) as CameraManager
+            val id=cameras.cameraIdList.firstOrNull { cameras.getCameraCharacteristics(it).get(CameraCharacteristics.FLASH_INFO_AVAILABLE)==true }
+                ?: error("Ce téléphone ne propose pas de lampe disponible.")
+            cameras.setTorchMode(id,action.enabled)
+            return if(action.enabled) "Commande d’allumage de la lampe transmise à Android." else "Commande d’extinction de la lampe transmise à Android."
+        }
+        if(action==DeviceAction.LockPhone && AngeLockAdmin.active(context)) { AngeLockAdmin.manager(context).lockNow(); return "Verrouillage demandé à Android." }
         if(action is DeviceAction.Volume) {
             val audio=context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
             require(!audio.isVolumeFixed) { "Le volume est fixe sur cet appareil." }
@@ -65,6 +85,9 @@ class AndroidDeviceActions(private val context: Context) {
             is DeviceAction.Dial -> "Numéro préparé dans Téléphone. Appuyez vous-même sur Appeler."
             is DeviceAction.CallNumber -> "Appel demandé à Téléphone : ${action.label}."
             is DeviceAction.Navigate -> "Ouverture de l’accueil demandée à Android."
+            is DeviceAction.RadioPanel -> "Panneau ${action.kind} ouvert : ${if(action.enabled) "activez" else "désactivez"} son interrupteur. Android exige votre validation."
+            DeviceAction.LockPhone -> "Autorisez le verrouillage dans l’écran Android, puis redemandez de verrouiller le téléphone."
+            DeviceAction.Screenshot -> "Confirmez la capture dans la fenêtre Android. L’image restera sur votre téléphone."
             is DeviceAction.Alarm, is DeviceAction.Timer -> "Demande transmise à l’Horloge. Vérifiez l’heure ou la durée dans cette application."
             is DeviceAction.Calendar -> "Événement proposé à l’Agenda. Choisissez la date puis enregistrez-le."
             else -> "Ouverture demandée : ${action.title}."

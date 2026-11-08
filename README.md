@@ -2,7 +2,7 @@
 
 ADVANCED NEURAL GUARDIAN ENGINE
 
-**Version actuelle Android : 2.3.1 standard.** Suite au blocage Play Protect signalé, le service d’accessibilité et sa capacité d’accès à l’écran des autres applications ont été retirés. Mini-compagne, appels par contacts confirmés, caméra et discussion restent disponibles. Retour/Récentes/défilement interapplications ne sont plus proposés ; Accueil utilise une intention publique Android. Garder Play Protect actif : [modifications et instructions](docs/PLAY_PROTECT.md). Les mentions de navigation par accessibilité dans les documents 2.3 ci-dessous sont historiques.
+**Version actuelle Android : 2.3.2 mini.** Un seul personnage compact dans les quatre espaces et en affichage flottant, quatre icônes (ouvrir, message, voix, options), session vocale partagée lors de l’ouverture d’une application. Recherche des noms courts comme « Notes » pour Samsung Notes, avec choix en cas d’ambiguïté. Nouvelles commandes natives : lampe, capture avec accord Android à chaque fois et verrouillage avec droit facultatif limité. Wi-Fi, Bluetooth et données mobiles ouvrent un panneau à valider. Voir [le guide actuel et les limites](docs/MINI_232.md). Le service d’accessibilité reste absent ; Retour/Récentes/défilement interapplications ne sont plus proposés. Garder Play Protect actif : [instructions](docs/PLAY_PROTECT.md). Les descriptions des anciennes versions ci-dessous sont historiques.
 
 ANGE Companion ajoute une compagne animée et parlante au design `ANGE_2_0_Design_Fidele`, avec une application Android native et un service PC local/cloud. Le projet suit A.docx comme cahier des charges de l’écosystème. **Il ne réalise pas encore l’intégralité de cet assistant.**
 
@@ -12,7 +12,7 @@ ANGE Companion ajoute une compagne animée et parlante au design `ANGE_2_0_Desig
 
 **ANGE 2.2 : base Jarvis réellement intégrée.** La révision `15f3f87e0bfd3fe68ec38deafbfeab22636c3993` du dépôt demandé par A.docx est conservée sous `third_party/jarvis/`, avec ses 309 fichiers et sa licence MIT. Le service PC charge ses modules originaux de mémoire et de texte vocal. Android utilise leurs ports Kotlin pour une mémoire persistante et les filtres de lecture. Voir [l’audit](docs/audit/JARVIS_AUDIT.md), [la table de provenance et le guide](docs/JARVIS_INTEGRATION.md) et [les mentions de licence](THIRD_PARTY_NOTICES.md). Les autres intégrations Jarvis ne sont pas automatiquement activées.
 
-**Bot 3D, voix et actions Android.** Un robot en vraie 3D locale s’ajoute au portrait illustré. Des commandes explicites permettent d’ouvrir les applications, de préparer appels/SMS/événements, de demander alarmes/minuteurs et de régler le volume multimédia. La discussion vocale peut enchaîner les tours tant qu’ANGE reste au premier plan. Voir [le guide bot 3D et commandes](docs/BOT_3D_ET_ACTIONS.md).
+**Historique 2.1 — bot 3D, voix et actions Android.** Le robot OpenGL et le portrait alternatif ont été retirés en 2.3.2 au profit de la mini-compagne unique. Des commandes explicites permettent d’ouvrir les applications, de préparer appels/SMS/événements, de demander alarmes/minuteurs et de régler le volume multimédia. La discussion vocale peut enchaîner les tours tant qu’ANGE reste au premier plan. Voir [le guide bot 3D et commandes](docs/BOT_3D_ET_ACTIONS.md).
 
 **Correctif vocal Android 2.2.1 :** les erreurs 12 (langue refusée) et 13 (modèle vocal indisponible) sont expliquées. Avec votre autorisation de session, le service vocal Android est essayé une fois si le moteur local refuse la langue. Sans autorisation, l’audio reste limité au moteur local. Voir [le dépannage sur Galaxy A53](docs/RECONNAISSANCE_VOCALE.md).
 
@@ -20,13 +20,13 @@ ANGE Companion ajoute une compagne animée et parlante au design `ANGE_2_0_Desig
 
 ## Compagne mobile
 
-- Même personnage féminin, huit poses illustrées, clignements, respiration, écoute attentive, salutation et mouvements de bouche pendant la lecture vocale.
-- Saisie texte, historique limité à la session, synthèse vocale Android, sélection des voix réellement présentes, interruption et arrêt à la mise en arrière-plan.
+- Mini-personnage féminin unique, douze poses illustrées, écoute, salutation, déplacement et bouche approximativement synchronisée à la lecture. Rendu de sprites 2D, pas un humain 3D articulé.
+- Saisie texte, historique limité à la session, synthèse vocale Android, sélection des voix réellement présentes, interruption volontaire et arrêt en arrière-plan si aucune mini-compagne flottante visible ne porte la session. Le verrouillage arrête le micro.
 - Microphone demandé seulement après appui sur Parler. Reconnaissance sur l’appareil privilégiée ; reconnaissance réseau uniquement après autorisation explicite de session.
 - Quatre modes Android : **Simple**, **Sur téléphone** (Qwen3 embarqué après installation), **PC local** (Ollama facultatif) et **En ligne** (Gemini, clé et consentement requis). Les commandes Android prises en charge fonctionnent sans modèle. Une ancienne préférence `cloud` reste remplacée par IA téléphone.
 - Jeton PC et clé Gemini chiffrés au repos avec Android Keystore ; aucune clé dans l’APK ou le dépôt. Le connecteur cloud historique du PC est distinct.
 
-Le choix **Bot 3D** affiche un robot procédural OpenGL avec articulations, éclairage, rotation au toucher et expressions. **Portrait 2D** conserve les huit poses de la compagne illustrée. Dans les deux cas, la bouche suit approximativement les événements de lecture, sans correspondance phonème par phonème. La voix et les langues disponibles dépendent du moteur Android installé. Le malgache n’est pas annoncé comme validé. Les commandes Android sont analysées séparément ; les réponses du modèle ne sont jamais exécutées.
+Sur Android 2.3.2, les sélecteurs Bot 3D/Portrait 2D sont supprimés. La mini-compagne issue de la photo est le seul personnage ; quand elle flotte, le personnage intégré est masqué pour éviter les doublons. La bouche suit approximativement la lecture, sans phonèmes précis. Les voix disponibles dépendent du moteur Android ; le malgache n’est pas validé. Les commandes Android sont analysées séparément ; aucune réponse du modèle n’est exécutée.
 
 ## Essayer le personnage sur Windows
 

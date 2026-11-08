@@ -8,9 +8,9 @@ class DeviceActionPolicyTest {
     private fun action(text: String)=(DeviceActionPolicy.parse(text,apps) as ActionParse.Found).action
     @Test fun installedAppNamesAreExactAndAccentInsensitive() {
         assertEquals(DeviceAction.OpenApp(apps[0]),action("ANGE, ouvre WhatsApp !"))
-        assertTrue(DeviceActionPolicy.parse("Ouvre Whats",apps) is ActionParse.Problem)
+        assertTrue(DeviceActionPolicy.parse("Ouvre Whats",apps) is ActionParse.ChooseApp)
         assertTrue(DeviceActionPolicy.parse("Ouvre FakeApp",apps) is ActionParse.Problem)
-        assertTrue(DeviceActionPolicy.parse("Ouvre WhatsApp",apps+apps[0].copy(packageName="clone")) is ActionParse.Problem)
+        assertTrue(DeviceActionPolicy.parse("Ouvre WhatsApp",apps+apps[0].copy(packageName="clone")) is ActionParse.ChooseApp)
     }
     @Test fun statementsAboutCommandsAreNotExecuted() {
         for(text in listOf("Explique comment ouvrir WhatsApp","Ne lance pas WhatsApp","Tu as dit : ouvre WhatsApp","Bonjour","Réponds avec Ouvre WhatsApp"))

@@ -153,4 +153,58 @@ class Companion23SmokeTest {
             assertTrue(payload.toString().contains("parlons de ma journée"))
         } finally { instrumentation.runOnMainSync { controller.close() } }
     }
+    @Test fun spokenShortNotesNameOpensTheInstalledAppWithoutAskingAModel() {
+        val instrumentation=InstrumentationRegistry.getInstrumentation()
+        val context=TestContext(instrumentation.targetContext)
+        lateinit var controller: CompanionController
+        instrumentation.runOnMainSync {
+            controller=CompanionController(context,installedApps={ listOf(LaunchableApp("com.android.settings","Samsung Notes")) })
+            controller.autoSpeak=false; controller.mode="ondevice"
+        }
+        try {
+            val ready=java.util.concurrent.atomic.AtomicBoolean(false)
+            for(i in 0..50) { instrumentation.runOnMainSync { ready.set(controller.availableApps.isNotEmpty()) }; if(ready.get()) break; Thread.sleep(100) }
+            instrumentation.runOnMainSync {
+                controller.send("Ouvre Notes")
+                assertEquals("com.android.settings",context.launched.single().component!!.packageName)
+                assertTrue(controller.lastReply.contains("Samsung Notes")); assertEquals(CompanionMood.IDLE,controller.mood)
+            }
+        } finally { instrumentation.runOnMainSync { controller.close() } }
+    }
+    @Test fun appNameAmbiguityWaitsForAFullNameBeforeOpening() {
+        val instrumentation=InstrumentationRegistry.getInstrumentation()
+        val context=TestContext(instrumentation.targetContext)
+        lateinit var controller: CompanionController
+        instrumentation.runOnMainSync {
+            controller=CompanionController(context,installedApps={ listOf(LaunchableApp("com.android.settings","Samsung Notes"),LaunchableApp("com.example.other","Notes privées")) })
+            controller.autoSpeak=false
+        }
+        try {
+            val ready=java.util.concurrent.atomic.AtomicBoolean(false)
+            for(i in 0..50) { instrumentation.runOnMainSync { ready.set(controller.availableApps.isNotEmpty()) }; if(ready.get()) break; Thread.sleep(100) }
+            instrumentation.runOnMainSync {
+                controller.send("Ouvre Notes")
+                assertEquals(2,controller.appChoices.size); assertTrue(context.launched.isEmpty())
+                controller.send("Samsung Notes")
+                assertTrue(controller.appChoices.isEmpty()); assertEquals("com.android.settings",context.launched.single().component!!.packageName)
+            }
+        } finally { instrumentation.runOnMainSync { controller.close() } }
+    }
+    @Test fun missingAppRefreshesTheInstalledListOnceBeforeReportingFailure() {
+        val instrumentation=InstrumentationRegistry.getInstrumentation()
+        val context=TestContext(instrumentation.targetContext)
+        val scans=java.util.concurrent.atomic.AtomicInteger(0)
+        lateinit var controller: CompanionController
+        instrumentation.runOnMainSync {
+            controller=CompanionController(context,installedApps={ if(scans.incrementAndGet()==1) emptyList() else listOf(LaunchableApp("com.android.settings","Samsung Notes")) })
+            controller.autoSpeak=false
+        }
+        try {
+            for(i in 0..50) { if(scans.get()>0) break; Thread.sleep(100) }
+            instrumentation.runOnMainSync { controller.send("Ouvre Notes") }
+            val opened=java.util.concurrent.atomic.AtomicBoolean(false)
+            for(i in 0..50) { instrumentation.runOnMainSync { opened.set(context.launched.isNotEmpty()) }; if(opened.get()) break; Thread.sleep(100) }
+            instrumentation.runOnMainSync { assertTrue(opened.get()); assertEquals(2,scans.get()); assertEquals("com.android.settings",context.launched.single().component!!.packageName) }
+        } finally { instrumentation.runOnMainSync { controller.close() } }
+    }
 }

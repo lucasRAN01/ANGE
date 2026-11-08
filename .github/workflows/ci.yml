@@ -34,5 +34,5 @@ jobs:
       - run: cd android && ./gradlew :app:assembleDebug :app:testDebugUnitTest :app:assembleDebugAndroidTest --no-daemon
       - uses: actions/upload-artifact@v4
         with:
-          name: ANGE-Mobile-Standard-231-debug
+          name: ANGE-Mobile-Mini-232-debug
           path: android/app/build/outputs/apk/debug/app-debug.apk

@@ -39,38 +39,13 @@ import kotlin.math.sin
 
 @Composable
 fun CompanionAvatar(controller: CompanionController, modifier: Modifier = Modifier) {
-    if(controller.avatar3D) { RobotCompanion3D(controller); return }
-    val atlas = ImageBitmap.imageResource(R.drawable.companion_atlas)
-    val context = LocalContext.current
-    val systemMotion = remember { Settings.Global.getFloat(context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) > 0f }
-    val animate = controller.animations && systemMotion && controller.active
-    var frame by remember { mutableIntStateOf(0) }
-    var tick by remember { mutableIntStateOf(0) }
-    var waveUntil by remember { mutableLongStateOf(0L) }
-    LaunchedEffect(controller.mood, animate) {
-        tick = 0
-        if (!animate) frame = 0
-        while (animate) {
-            frame = CompanionPolicy.frame(controller.mood.name, tick, controller.mouthBeat, animate, System.currentTimeMillis() < waveUntil)
-            tick++
-            delay(55)
-        }
-    }
-    val breath = if (animate) sin(tick * .035).toFloat() else 0f
-    Box(modifier.fillMaxWidth().height(350.dp)
-        .background(Brush.radialGradient(listOf(Color(0x6631B5F4), Color.Transparent)), RoundedCornerShape(30.dp))
-        .semantics { contentDescription = "ANGE, compagne 2D animée. Touchez-la pour une salutation vocale." }
-        .clickable { waveUntil = System.currentTimeMillis() + 950; controller.greet() }, contentAlignment = Alignment.Center) {
-        Canvas(Modifier.fillMaxSize().graphicsLayer {
-            translationY = breath * 2f; scaleX = 1f + breath * .004f; scaleY = 1f + breath * .004f
-            rotationZ = if (controller.mood == CompanionMood.LISTENING && animate) -.6f else breath * .15f
-        }) {
-            val w = atlas.width / 4; val h = atlas.height / 2
-            val height = min(size.height, size.width * h / w).toInt()
-            val width = (height.toFloat() * w / h).toInt()
-            drawImage(atlas, srcOffset = IntOffset(frame % 4 * w, frame / 4 * h), srcSize = IntSize(w,h),
-                dstOffset = IntOffset((size.width.toInt() - width) / 2, size.height.toInt() - height), dstSize = IntSize(width,height))
-        }
+    if (FloatingCompanionService.running) return
+    Box(modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+        androidx.compose.ui.viewinterop.AndroidView(
+            factory = { PhotoCompanionView(it).apply { this.controller = controller; setOnClickListener { wave(); controller.greet() } } },
+            modifier = Modifier.width(88.dp).height(116.dp),
+            update = { it.controller = controller; it.restart() }
+        )
     }
 }
 
@@ -93,8 +68,6 @@ fun CompanionScreen(controller: CompanionController, onMicrophone: () -> Unit) {
             TextButton(onClick = { configuration = !configuration }, modifier = Modifier.width(80.dp)) { Text("Options", maxLines = 1) }
         }
         Row(horizontalArrangement=Arrangement.spacedBy(7.dp),verticalAlignment=Alignment.CenterVertically) {
-            FilterChip(selected=controller.avatar3D,onClick={ controller.avatar3D=true; controller.saveSettings() },label={ Text("Bot 3D",fontSize=11.sp) })
-            FilterChip(selected=!controller.avatar3D,onClick={ controller.avatar3D=false; controller.saveSettings() },label={ Text("Portrait 2D",fontSize=11.sp) })
             TextButton(onClick={ actions=true; controller.refreshApps() }) { Text("Actions") }
             Button(onClick=onMicrophone,enabled=!controller.modelBusy && controller.mood!=CompanionMood.THINKING,
                 contentPadding=PaddingValues(horizontal=10.dp,vertical=4.dp)) { Text("Parler",fontSize=11.sp) }
@@ -204,9 +177,10 @@ fun CompanionScreen(controller: CompanionController, onMicrophone: () -> Unit) {
             Text("Le jeton est protégé par Android Keystore. Le mode IA téléphone n’utilise pas cette connexion.", fontSize = 11.sp)
             }
         }
-        Text("Bot en vraie 3D procédurale ou portrait en huit poses 2D. Synchronisation vocale approximative. Les commandes Android explicites utilisent les fonctions des applications ; les réponses du modèle ne déclenchent aucune action.", fontSize = 10.sp, color = Color(0xFF93B4D0))
+        Text("Mini-ANGE unique, animée par poses. Synchronisation vocale approximative. Les commandes Android explicites utilisent les fonctions des applications ; les réponses du modèle ne déclenchent aucune action.", fontSize = 10.sp, color = Color(0xFF93B4D0))
     }
     if(actions) DeviceActionsDialog(controller,onDismiss={ actions=false })
+    if(controller.appChoices.isNotEmpty()) AlertDialog(onDismissRequest={ controller.cancelAppChoice() },title={ Text("Quelle application ouvrir ?") },text={ LazyColumn(Modifier.heightIn(max=350.dp)) { items(controller.appChoices,key={ it.packageName }) { app -> TextButton(onClick={ controller.chooseApp(app) }) { Text(app.label) } } } },confirmButton={ TextButton(onClick={ controller.cancelAppChoice() }) { Text("Annuler") } })
     if(jarvisLicense) {
         val license=remember { localContext.assets.open("licenses/jarvis-MIT.txt").bufferedReader().use { it.readText() } }
         AlertDialog(onDismissRequest={ jarvisLicense=false },title={ Text("Base Jarvis · MIT") },

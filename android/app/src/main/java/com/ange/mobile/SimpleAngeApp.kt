@@ -31,6 +31,9 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -48,7 +51,7 @@ private val Lilac=Color(0xFFB9ACFF)
 private val Muted=Color(0xFF98A9C3)
 
 @Composable
-fun SimpleAngeApp(controller: CompanionController, voiceRequest: Int = 0) {
+fun SimpleAngeApp(controller: CompanionController, voiceRequest: Int = 0, chatRequest: Int = 0) {
     val context=LocalContext.current
     var page by rememberSaveable { mutableIntStateOf(0) }
     var draft by rememberSaveable { mutableStateOf("") }
@@ -56,6 +59,10 @@ fun SimpleAngeApp(controller: CompanionController, voiceRequest: Int = 0) {
     var call by remember { mutableStateOf(false) }
     var callName by rememberSaveable { mutableStateOf("") }
     var advanced by remember { mutableStateOf(false) }
+    val draftFocus=remember { FocusRequester() }
+    val keyboard=LocalSoftwareKeyboardController.current
+    var pendingChatFocus by remember { mutableStateOf(false) }
+    LaunchedEffect(chatRequest) { if(chatRequest>0) { page=0; advanced=false; pendingChatFocus=true } }
     val discussionScroll=rememberLazyListState()
     LaunchedEffect(controller.lines.size) {
         if(controller.lines.isNotEmpty()) discussionScroll.animateScrollToItem(2+(if(controller.mode=="ondevice" && !controller.modelReady) 1 else 0)+controller.lines.takeLast(4).size)
@@ -77,9 +84,10 @@ fun SimpleAngeApp(controller: CompanionController, voiceRequest: Int = 0) {
         Scaffold(containerColor=Space,bottomBar={
             Column(Modifier.imePadding().background(Space)) {
                 if(page==0) {
+                    LaunchedEffect(pendingChatFocus) { if(pendingChatFocus) { draftFocus.requestFocus(); keyboard?.show(); pendingChatFocus=false } }
                     Text(controller.status,modifier=Modifier.padding(horizontal=22.dp,vertical=6.dp),color=if(controller.mood==CompanionMood.ERROR) Color(0xFFFFB4B4) else Muted,fontSize=11.sp,maxLines=5)
                     Row(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=7.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(9.dp)) {
-                        OutlinedTextField(value=draft,onValueChange={ draft=it.take(4000) },placeholder={ Text("Parlez-moi, ou demandez une action…",fontSize=12.sp) },modifier=Modifier.weight(1f),shape=RoundedCornerShape(22.dp),maxLines=3,
+                        OutlinedTextField(value=draft,onValueChange={ draft=it.take(4000) },placeholder={ Text("Parlez-moi, ou demandez une action…",fontSize=12.sp) },modifier=Modifier.weight(1f).focusRequester(draftFocus),shape=RoundedCornerShape(22.dp),maxLines=3,
                             keyboardOptions=KeyboardOptions(imeAction=ImeAction.Send),keyboardActions=KeyboardActions(onSend={ send() }))
                         FilledIconButton(onClick={ if(draft.isNotBlank()) send() else microphone.launch(Manifest.permission.RECORD_AUDIO) },modifier=Modifier.size(50.dp),colors=IconButtonDefaults.filledIconButtonColors(containerColor=Mint)) {
                             if(draft.isBlank()) NativeIcon("voice",Modifier.size(25.dp)) else Text("↑",color=Space,fontSize=27.sp)
@@ -95,31 +103,22 @@ fun SimpleAngeApp(controller: CompanionController, voiceRequest: Int = 0) {
             }
         }) { padding ->
             Column(Modifier.fillMaxSize().padding(padding).padding(horizontal=22.dp)) {
-                Row(Modifier.fillMaxWidth().padding(top=8.dp,bottom=12.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.SpaceBetween) {
-                    Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)) {
-                        Image(painterResource(R.drawable.ange_logo),null,Modifier.size(35.dp))
-                        Column { Text("ANGE",fontSize=23.sp,fontWeight=FontWeight.SemiBold,letterSpacing=4.sp); Text("Votre compagne personnelle",fontSize=10.sp,color=Muted) }
+                Row(Modifier.fillMaxWidth().padding(top=8.dp,bottom=12.dp),verticalAlignment=Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)) {
+                            Image(painterResource(R.drawable.ange_logo),null,Modifier.size(35.dp))
+                            Column { Text("ANGE",fontSize=23.sp,fontWeight=FontWeight.SemiBold,letterSpacing=4.sp); Text("Votre compagne personnelle",fontSize=10.sp,color=Muted) }
+                        }
+                        AssistChip(onClick={ page=3 },label={ Text(when(controller.mode) { "online" -> "En ligne"; "local" -> "PC local"; "offline" -> "Simple"; else -> "Sur téléphone" },fontSize=10.sp) })
                     }
-                    AssistChip(onClick={ page=3 },label={ Text(when(controller.mode) { "online" -> "En ligne"; "local" -> "PC local"; "offline" -> "Simple"; else -> "Sur téléphone" },fontSize=10.sp) })
+                    CompanionAvatar(controller,Modifier.width(96.dp))
                 }
                 when(page) {
                     0 -> LazyColumn(Modifier.fillMaxSize(),state=discussionScroll,verticalArrangement=Arrangement.spacedBy(15.dp),contentPadding=PaddingValues(bottom=18.dp)) {
                         item {
                             Text("À vos côtés.",fontSize=30.sp,fontWeight=FontWeight.SemiBold)
                             Text("Une conversation. Une action. Tout commence ici.",fontSize=12.sp,color=Muted,modifier=Modifier.padding(top=5.dp))
-                            Box(Modifier.fillMaxWidth().height(220.dp).padding(top=5.dp)
-                                .background(Brush.radialGradient(listOf(Color(0xFF19304A),Space))),contentAlignment=Alignment.BottomCenter) {
-                                Box(Modifier.align(Alignment.BottomCenter).padding(bottom=6.dp).width(205.dp).height(30.dp).border(1.dp,Mint.copy(alpha=.5f),CircleShape).background(Mint.copy(alpha=.04f),CircleShape))
-                                if(controller.avatarStyle=="robot") Box(Modifier.fillMaxWidth().height(245.dp)) { RobotCompanion3D(controller) }
-                                else if(controller.avatarStyle=="portrait") CompanionAvatar(controller)
-                                else {
-                                    var dx by remember { mutableFloatStateOf(0f) }; var dy by remember { mutableFloatStateOf(0f) }
-                                    AndroidView(factory={ PhotoCompanionView(it).apply { this.controller=controller; setOnClickListener { wave(); controller.greet() } } },
-                                        modifier=Modifier.height(210.dp).width(165.dp).offset { IntOffset(dx.roundToInt(),dy.roundToInt()) }.pointerInput(Unit) {
-                                            detectDragGestures { change,amount -> change.consume(); dx=(dx+amount.x).coerceIn(-120f,120f); dy=(dy+amount.y).coerceIn(-45f,0f) }
-                                        },update={ it.controller=controller; it.restart() })
-                                }
-                            }
+                            if(!Settings.canDrawOverlays(context)) OutlinedButton(onClick={ context.startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,Uri.parse("package:${context.packageName}"))) }) { Text("Garder mini-ANGE visible hors de l’application",fontSize=12.sp) }
                             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.Center) {
                                 FilledTonalButton(onClick={ microphone.launch(Manifest.permission.RECORD_AUDIO) }) { NativeIcon("voice",Modifier.size(19.dp)); Spacer(Modifier.width(7.dp)); Text("Parler à ANGE") }
                                 TextButton(onClick={ controller.stop() }) { Text("Arrêter",color=Muted) }
@@ -153,6 +152,7 @@ fun SimpleAngeApp(controller: CompanionController, voiceRequest: Int = 0) {
         if(call) AlertDialog(onDismissRequest={ call=false },title={ Text("Qui souhaitez-vous appeler ?") },text={ Column { Text("Le contact sera recherché uniquement sur ce téléphone.",fontSize=12.sp); OutlinedTextField(callName,{ callName=it.take(100) },label={ Text("Nom du contact, par exemple Babe") },singleLine=true) } },confirmButton={ TextButton(onClick={ call=false; controller.send("Appelle $callName") },enabled=callName.isNotBlank()) { Text("Chercher") } },dismissButton={ TextButton(onClick={ call=false }) { Text("Annuler") } })
         controller.pendingAction?.let { action -> AlertDialog(onDismissRequest={ controller.cancelAction() },title={ Text(action.title) },text={ Column { Text(action.detail); if(action is DeviceAction.CallNumber) TextButton(onClick={ voiceConfirmation=true; microphone.launch(Manifest.permission.RECORD_AUDIO) }) { Text("Confirmer à la voix : « Confirme l’appel »") } } },confirmButton={ TextButton(onClick={ controller.confirmAction() }) { Text(if(action is DeviceAction.CallNumber) "Appeler" else "Continuer") } },dismissButton={ TextButton(onClick={ controller.cancelAction() }) { Text("Annuler") } }) }
         if(controller.contactChoices.isNotEmpty()) AlertDialog(onDismissRequest={ controller.cancelContactChoice() },title={ Text("Choisir le numéro") },text={ LazyColumn(Modifier.heightIn(max=350.dp)) { items(controller.contactChoices) { contact -> TextButton(onClick={ controller.chooseContact(contact) }) { Text("${contact.name}\n${contact.number}") } } } },confirmButton={ TextButton(onClick={ controller.cancelContactChoice() }) { Text("Annuler") } })
+        if(controller.appChoices.isNotEmpty()) AlertDialog(onDismissRequest={ controller.cancelAppChoice() },title={ Text("Quelle application ouvrir ?") },text={ LazyColumn(Modifier.heightIn(max=350.dp)) { items(controller.appChoices,key={ it.packageName }) { app -> TextButton(onClick={ controller.chooseApp(app) },modifier=Modifier.fillMaxWidth()) { Column { Text(app.label); Text(app.packageName,fontSize=10.sp,color=Muted) } } } } },confirmButton={ TextButton(onClick={ controller.cancelAppChoice() }) { Text("Annuler") } })
         if(history) AlertDialog(onDismissRequest={ history=false },title={ Text("Notre discussion") },text={ LazyColumn(Modifier.heightIn(max=500.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) { items(controller.lines.toList()) { DialogueCard(it) } } },confirmButton={ TextButton(onClick={ history=false }) { Text("Fermer") } },dismissButton={ TextButton(onClick={ controller.clearHistory(); history=false }) { Text("Effacer la session") } })
     }
 }
@@ -179,10 +179,11 @@ fun SimpleAngeApp(controller: CompanionController, voiceRequest: Int = 0) {
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(14.dp)) {
         Text("Je m’en occupe.",fontSize=28.sp,fontWeight=FontWeight.SemiBold)
         Text("Des commandes locales. Le modèle n’exécute aucune action.",color=Muted,fontSize=12.sp)
-        listOf("Ouvre appareil photo","Quelle heure est-il ?","Quel jour sommes-nous ?","Combien de batterie me reste-t-il ?","Ouvre paramètres","Volume à 40 %","Va à l’accueil").forEach { sample ->
+        listOf("Ouvre appareil photo","Allume la lampe","Éteins la lampe","Capture d’écran","Verrouille le téléphone","Active le Wi-Fi","Active le Bluetooth","Active les données mobiles","Quelle heure est-il ?","Quel jour sommes-nous ?","Combien de batterie me reste-t-il ?","Ouvre paramètres","Volume à 40 %","Va à l’accueil").forEach { sample ->
             OutlinedButton(onClick={ controller.send(sample) },modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(14.dp)) { Text(sample) }
         }
         Text("Applications",fontSize=20.sp)
+        TextButton(onClick={ controller.refreshApps() }) { Text("Actualiser les applications") }
         OutlinedTextField(appQuery,{ appQuery=it.take(80) },label={ Text("Rechercher une application installée") },modifier=Modifier.fillMaxWidth())
         controller.availableApps.filter { DeviceActionPolicy.normalized(it.label).contains(DeviceActionPolicy.normalized(appQuery)) }.take(12).forEach { app ->
             TextButton(onClick={ controller.send("Ouvre ${app.label}") }) { Text(app.label) }
@@ -239,10 +240,9 @@ fun SimpleAngeApp(controller: CompanionController, voiceRequest: Int = 0) {
         }
         HorizontalDivider(color=Muted.copy(alpha=.2f)); Text("MINI-COMPAGNE",fontSize=10.sp,color=Mint,letterSpacing=2.sp)
         Text("Personnage inspiré de votre photo, animé en douze poses. Touchez-le pour une salutation ; déplacez-le du doigt.",fontSize=12.sp,color=Muted)
-        Row(horizontalArrangement=Arrangement.spacedBy(7.dp)) { listOf("photo" to "Mini ANGE","robot" to "Robot 3D","portrait" to "Portrait").forEach { (style,name) -> FilterChip(selected=controller.avatarStyle==style,onClick={ controller.avatarStyle=style; controller.saveSettings() },label={ Text(name,fontSize=11.sp) }) } }
         Toggle("Animations du personnage",controller.animations) { controller.animations=it; controller.saveSettings() }
         Toggle("Petites balades du personnage flottant",roam) { roam=it }
-        Text("La mini-compagne flottante reste visible au-dessus des applications. Microphone uniquement sur Parler, arrêt depuis × ou la notification. Elle s’interrompt quand l’écran est verrouillé. Aucun démarrage automatique.",fontSize=12.sp,color=Muted)
+        Text("La mini-compagne flotte au-dessus des applications. Crayon : ouvrir ANGE. Bulle : écrire un message. Onde audio : parler. Flèche : masquer les commandes ou fermer la mini-compagne. Touchez le personnage pour retrouver les commandes masquées. Arrêt également depuis la notification.",fontSize=12.sp,color=Muted)
         OutlinedButton(onClick={ context.startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,Uri.parse("package:${context.packageName}"))) },modifier=Modifier.fillMaxWidth()) { Text("Autoriser l’affichage flottant") }
         Button(onClick={
             if(!Settings.canDrawOverlays(context)) floatingStatus="Autorisez d’abord l’affichage flottant avec le bouton ci-dessus."
@@ -251,6 +251,9 @@ fun SimpleAngeApp(controller: CompanionController, voiceRequest: Int = 0) {
         if(FloatingCompanionService.running) TextButton(onClick={ FloatingCompanionService.stop(context) }) { Text("Fermer la mini-compagne flottante") }
         if(floatingStatus.isNotBlank()) Text(floatingStatus,fontSize=12.sp,color=Lilac)
         Text("Version standard : aucun service d’accessibilité, aucune lecture de l’écran des autres applications. Retour, Récentes et leur défilement restent manuels. L’ouverture de l’accueil et des applications utilise les fonctions publiques Android. Contacts et Téléphone sont demandés seulement lors d’un appel.",fontSize=11.sp,color=Muted)
+        Text("Verrouillage : droit d’administrateur Android facultatif, limité au verrouillage. Aucun effacement ni changement de mot de passe. Capture : Android vous demande un accord à chaque fois ; l’image reste locale. Wi-Fi/Bluetooth/données : validation dans le panneau Android.",fontSize=11.sp,color=Muted)
+        OutlinedButton(onClick={ context.startActivity(AngeLockAdmin.request(context)) }) { Text("Autorisation Android de verrouillage") }
+        TextButton(onClick={ AngeLockAdmin.manager(context).removeActiveAdmin(AngeLockAdmin.component(context)) }) { Text("Retirer le droit de verrouillage d’ANGE") }
         HorizontalDivider(color=Muted.copy(alpha=.2f)); Text("VOIX",fontSize=10.sp,color=Mint,letterSpacing=2.sp)
         Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) { listOf("fr","en","mg").forEach { lang -> FilterChip(selected=controller.language==lang,onClick={ controller.stop(); controller.language=lang; controller.selectedVoice=""; controller.saveSettings() },label={ Text(lang.uppercase()) }) } }
         Toggle("Lire les réponses",controller.autoSpeak) { controller.autoSpeak=it; controller.saveSettings() }
@@ -266,7 +269,7 @@ fun SimpleAngeApp(controller: CompanionController, voiceRequest: Int = 0) {
         OutlinedButton(onClick={ runCatching { context.startActivity(SpeechInputIntents.settings()) }.onFailure { context.startActivity(Intent(Settings.ACTION_SETTINGS)) } }) { Text("Réglages de reconnaissance") }
         TextButton(onClick={ runCatching { context.startActivity(Intent("com.android.settings.TTS_SETTINGS")) }.onFailure { context.startActivity(Intent(Settings.ACTION_SETTINGS)) } }) { Text("Réglages de lecture vocale") }
         TextButton(onClick=onAdvanced) { Text("Anciennes vues et provenance Jarvis") }
-        Text("ANGE 2.3.1 standard · sans service d’accessibilité. Animation 2D par poses, robot procédural 3D en option. Pas de contrôle universel des applications, de clonage vocal ou de réentraînement automatique.",fontSize=10.sp,color=Muted)
+        Text("ANGE 2.3.2 mini · sans service d’accessibilité. Mini-ANGE unique, animée par poses. Pas de contrôle universel des applications, de clonage vocal ou de réentraînement automatique.",fontSize=10.sp,color=Muted)
         Spacer(Modifier.height(20.dp))
     }
     if(download) AlertDialog(onDismissRequest={ download=false },title={ Text("Installer le modèle local ?") },text={ Text("347 Mo depuis Hugging Face, vérifiés par SHA-256. Gardez ANGE ouverte pendant le transfert. Ce modèle ne garantit pas une conversation du niveau d’un grand modèle en ligne.") },confirmButton={ TextButton(onClick={ download=false; controller.downloadModel() }) { Text("Télécharger") } },dismissButton={ TextButton(onClick={ download=false }) { Text("Annuler") } })
